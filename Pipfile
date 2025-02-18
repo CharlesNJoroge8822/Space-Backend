@@ -9,6 +9,7 @@ flask-sqlalchemy = "*"
 flask-mail = "*"
 werkzeug = "*"
 flask-cors = "*"
+flask-migrate = "*"
 
 [dev-packages]
 

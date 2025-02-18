@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "a7fc93887a1fe4e236e994b2bb2581e519f82c5f6018709b166621eec35be69c"
+            "sha256": "81f37288f3c26029f4915a210fbdb0ac5a090faeb6093725dd7dcd29d6b92fe5"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -16,6 +16,14 @@
         ]
     },
     "default": {
+        "alembic": {
+            "hashes": [
+                "sha256:1acdd7a3a478e208b0503cd73614d5e4c6efafa4e73518bb60e4f2846a37b1c5",
+                "sha256:496e888245a53adf1498fcab31713a469c65836f8de76e01399aa1c3e90dd213"
+            ],
+            "markers": "python_version >= '3.8'",
+            "version": "==1.14.1"
+        },
         "blinker": {
             "hashes": [
                 "sha256:1779309f71bf239144b9399d06ae925637cf6634cf6bd131104184531bf67c01",
@@ -57,6 +65,15 @@
             "index": "pypi",
             "markers": "python_version >= '3.8'",
             "version": "==0.10.0"
+        },
+        "flask-migrate": {
+            "hashes": [
+                "sha256:1a336b06eb2c3ace005f5f2ded8641d534c18798d64061f6ff11f79e1434126d",
+                "sha256:24d8051af161782e0743af1b04a152d007bad9772b2bca67b7ec1e8ceeb3910d"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.6'",
+            "version": "==4.1.0"
         },
         "flask-sqlalchemy": {
             "hashes": [
@@ -154,6 +171,14 @@
             "markers": "python_version >= '3.8'",
             "version": "==8.5.0"
         },
+        "importlib-resources": {
+            "hashes": [
+                "sha256:980862a1d16c9e147a59603677fa2aa5fd82b87f223b6cb870695bcfce830065",
+                "sha256:ac29d5f956f01d5e4bb63102a5a19957f1b9175e45649977264a1416783bb717"
+            ],
+            "markers": "python_version >= '3.8'",
+            "version": "==6.4.5"
+        },
         "itsdangerous": {
             "hashes": [
                 "sha256:c6242fc49e35958c8b15141343aa660db5fc54d4f13a1db01a3f5891b98700ef",
@@ -169,6 +194,14 @@
             ],
             "markers": "python_version >= '3.7'",
             "version": "==3.1.5"
+        },
+        "mako": {
+            "hashes": [
+                "sha256:95920acccb578427a9aa38e37a186b1e43156c87260d7ba18ca63aa4c7cbd3a1",
+                "sha256:b5d65ff3462870feec922dbccf38f6efb44e5714d7b593a656be86663d8600ac"
+            ],
+            "markers": "python_version >= '3.8'",
+            "version": "==1.3.9"
         },
         "markupsafe": {
             "hashes": [

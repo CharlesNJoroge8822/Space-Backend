@@ -8,6 +8,9 @@ user_bp = Blueprint("user_bp", __name__)
 PASSWORD_REGEX = r"^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$"
 EMAIL_REGEX = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
 
+def is_admin(user):
+    return user and user.role == 'Admin'
+
 # ✅ CREATE USER
 @user_bp.route("/users", methods=['POST'])
 def create_user():
@@ -147,7 +150,7 @@ def delete_user(user_id):
         return jsonify({"error": "User not found"}), 404
 
     # ✅ Ensure admin rights (Replace with actual authentication logic)
-    if user.role != "Admin":
+    if not is_admin(user):
         return jsonify({"error": "Only admins can delete users"}), 403
 
     db.session.delete(user)

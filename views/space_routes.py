@@ -20,6 +20,11 @@ def create_space():
     if not all([name, description, location, price_per_hour, price_per_day, availability]):
         return jsonify({"error": "Missing required fields"}), 400
 
+    # ✅ Check if space already exists
+    existing_space = Space.query.filter_by(name=name).first()
+    if existing_space:
+        return jsonify({"error": "Space with this name already exists"}), 400
+
     new_space = Space(
         name=name,
         description=description,
@@ -49,7 +54,7 @@ def create_space():
 @space_bp.route("/spaces", methods=['GET'])
 def get_all_spaces():
     spaces = Space.query.all()
-
+    
     spaces_list = [{
         "id": space.id,
         "name": space.name,
@@ -60,7 +65,7 @@ def get_all_spaces():
         "availability": space.availability,
         "images": space.images
     } for space in spaces]
-
+    
     return jsonify(spaces_list), 200
 
 # ✅ FETCH SINGLE SPACE
