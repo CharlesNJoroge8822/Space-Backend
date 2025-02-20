@@ -64,6 +64,7 @@ def create_user():
 @user_bp.route("/users/<int:id>", methods=['GET'])
 def fetch_user(id):
     user = User.query.get(id)
+    # !pagination vars
 
     if not user:
         return jsonify({"error": "User with ID not found"}), 404
@@ -80,8 +81,14 @@ def fetch_user(id):
 # ✅ FETCH ALL USERS
 @user_bp.route("/users", methods=['GET'])
 def fetch_all_users():
-    users = User.query.all()
-    
+    # ! Pagination Variables
+    page = request.args.get('page', 1, type=int)  # Page number
+    per_page = request.args.get('per_page', 10, type=int)  # Items per page
+
+    # ! Correct Pagination Query
+    paginated_users = User.query.paginate(page=page, per_page=per_page, error_out=False)
+
+    # ! Loop Through Paginated Results
     users_list = [{
         "id": user.id,
         "name": user.name,
@@ -89,9 +96,16 @@ def fetch_all_users():
         "role": user.role,
         "image": user.image,
         "created_at": user.created_at
-    } for user in users]
+    } for user in paginated_users.items]
 
-    return jsonify(users_list), 200
+    # ! Return Paginated Data
+    return jsonify({
+        "users": users_list,
+        "total_users": paginated_users.total,  # Total users in DB
+        "total_pages": paginated_users.pages,  # Total pages
+        "current_page_number": paginated_users.page  # Current page number
+    }), 200
+
 
 # ✅ UPDATE USER
 @user_bp.route("/users/<int:id>", methods=['PATCH'])
