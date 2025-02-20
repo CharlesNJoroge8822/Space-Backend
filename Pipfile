@@ -10,6 +10,9 @@ flask-mail = "*"
 werkzeug = "*"
 flask-cors = "*"
 flask-migrate = "*"
+python-dotenv = "*"
+cloudinary = "*"
+flask-dance = "*"
 flask-jwt-extended = "*"
 
 [dev-packages]
