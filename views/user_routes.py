@@ -86,6 +86,7 @@ def fetch_user(id):
 
 #! ✅ FETCH ALL USERS (Admin Only). Integrate Pagination ...
 @user_bp.route("/users", methods=['GET'])
+@jwt_required()
 def fetch_all_users():
     if not is_admin():
         return jsonify({"error": "Only admins can access this resource"}), 403
