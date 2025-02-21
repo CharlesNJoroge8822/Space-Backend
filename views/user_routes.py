@@ -69,7 +69,6 @@ def create_user():
 
 #! ✅ FETCH SINGLE USER
 @user_bp.route("/users/<int:id>", methods=['GET'])
-@jwt_required()
 def fetch_user(id):
     user = User.query.get(id)
 
@@ -87,7 +86,6 @@ def fetch_user(id):
 
 #! ✅ FETCH ALL USERS (Admin Only). Integrate Pagination ...
 @user_bp.route("/users", methods=['GET'])
-@jwt_required()
 def fetch_all_users():
     if not is_admin():
         return jsonify({"error": "Only admins can access this resource"}), 403
@@ -97,8 +95,8 @@ def fetch_all_users():
     per_page = request.args.get('per_page', 10, type=int)
     #!!return 10 users per request if user dont specify
 
-    paginated_users = User.query.paginate(page = page, perpage=per_page, error_out=False)
-    
+    paginated_users = User.query.paginate(page = page, per_page=per_page, error_out=False)
+        
     users_list = [{
         "id": user.id,
         "name": user.name,
