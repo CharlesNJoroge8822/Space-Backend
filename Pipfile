@@ -15,6 +15,7 @@ cloudinary = "*"
 flask-dance = "*"
 flask-jwt-extended = "*"
 gunicorn = "*"
+requests = "*"
 
 [dev-packages]
 
