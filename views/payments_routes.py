@@ -50,6 +50,32 @@ def initiate_stk_push():
 
     return jsonify(response)
 
+@payment_bp.route('/callback', methods=['POST'])
+def handle_callback():
+    callback_data = request.json
+
+    # Check the result code
+    result_code = callback_data['Body']['stkCallback']['ResultCode']
+    if result_code != 0:
+        # If the result code is not 0, there was an error
+        error_message = callback_data['Body']['stkCallback']['ResultDesc']
+        response_data = {'ResultCode': result_code, 'ResultDesc': error_message}
+        return jsonify(response_data)
+
+    # If the result code is 0, the transaction was completed
+    callback_metadata = callback_data['Body']['stkCallback']['CallbackMetadata']
+    amount = None
+    phone_number = None
+    for item in callback_metadata['Item']:
+        if item['Name'] == 'Amount':
+            amount = item['Value']
+        elif item['Name'] == 'PhoneNumber':
+            phone_number = item['Value']
+            
+
+    # Return a success response to the M-Pesa server
+    response_data = {'ResultCode': result_code, 'ResultDesc': 'Success'}
+    return jsonify(response_data)
 #! FETCH SINGLE PAYMENT
 @payment_bp.route("/payments/<int:id>", methods=['GET'])
 def fetch_payment(id):

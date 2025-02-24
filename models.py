@@ -1,7 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
-db = SQLAlchemy()  # Initialize DB
+db = SQLAlchemy()  #! Initialize DB
 class User(db.Model):
     __tablename__ = 'users'
 
@@ -27,11 +27,11 @@ class Space(db.Model):
     location = db.Column(db.String(200), nullable=False, index=True)
     price_per_hour = db.Column(db.Float, nullable=False)
     price_per_day = db.Column(db.Float, nullable=False)
-    availability = db.Column(db.String(500), nullable=False)  # JSON String of availability slots
-    images = db.Column(db.String(500), nullable=True)  # Comma-separated image URLs
+    availability = db.Column(db.String(500), nullable=False)  #! JSON String of availability slots
+    images = db.Column(db.String(500), nullable=True)  #! Comma-separated image URLs
 
-    # Relationships
-    bookings = db.relationship('Booking', backref='space', lazy=True)  # Multiple bookings allowed
+    #! Relationships
+    bookings = db.relationship('Booking', backref='space', lazy=True)  #! Multiple bookings allowed
 
 
 
@@ -80,23 +80,37 @@ class Payment(db.Model):
 
     booking_id = db.Column(db.Integer, db.ForeignKey('bookings.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-
+    
     mpesa_transaction_id = db.Column(db.String(100), unique=True, nullable=False, index=True)
     phone_number = db.Column(db.String(20), nullable=False)
 
-    def __init__(self, booking_id, user_id, amount, mpesa_transaction_id, phone_number):
+    def __init__(self, booking_id, user_id, amount, mpesa_transaction_id, phone_number, status="Processing"):
         self.booking_id = booking_id
         self.user_id = user_id
         self.amount = amount
         self.mpesa_transaction_id = mpesa_transaction_id
         self.phone_number = phone_number
+        self.status = status  
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "amount": self.amount,
+            "status": self.status,
+            "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+            "booking_id": self.booking_id,
+            "user_id": self.user_id,
+            "mpesa_transaction_id": self.mpesa_transaction_id,
+            "phone_number": self.phone_number
+        }
+ 
 
 
 class TokenBlockList(db.Model):
-    __tablename__ = 'token_blocklist'  # ✅ Ensured table name is correct
+    __tablename__ = 'token_blocklist'  #! ✅ Ensured table name is correct
 
     id = db.Column(db.Integer, primary_key=True)
-    jti = db.Column(db.String(36), nullable=False, unique=True)  # JWT ID (jti)
+    jti = db.Column(db.String(36), nullable=False, unique=True)  #! JWT ID (jti)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     def __repr__(self):

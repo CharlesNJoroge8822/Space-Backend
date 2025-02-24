@@ -1,7 +1,7 @@
-from flask import Flask, redirect, url_for, jsonify
+from flask import Flask, redirect, url_for, jsonify, request
 from flask_migrate import Migrate
 from models import db, User, Space, Booking, Payment, Agreement, TokenBlockList  
-from flask_dance.contrib.google import make_google_blueprint, google
+from flask_dance.contrib.google import make_google_blueprint, google                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
 from flask_jwt_extended import JWTManager
 from flask_cors import cross_origin, CORS
 
@@ -19,7 +19,7 @@ google_bp = make_google_blueprint(
 )
 app.register_blueprint(google_bp, url_prefix="/google_login")
 
-#! Google Login Route
+#! Google Login Route                                                                                                                                                                                                                                                                                                                                           
 @app.route("/google_login")
 def google_login():
     if not google.authorized:
@@ -27,6 +27,12 @@ def google_login():
     
     user_info = google.get("/oauth2/v2/userinfo").json()
     return jsonify(user_info)  #! Returns Google user details
+
+@app.route('/callback', methods=['POST'])
+def mpesa_callback():
+    data = request.get_json()
+    print("Received Callback:", data)  # Debugging
+    return jsonify({"message": "Callback received"}), 200
 
 #! Database Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///rental.db'
