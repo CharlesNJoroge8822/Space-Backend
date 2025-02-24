@@ -7,6 +7,7 @@ from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash
 from models import db, User, Space, Booking, Payment, Agreement, TokenBlockList  
 from google_auth_oauthlib.flow import Flow
+from flask_dance.contrib.google import make_google_blueprint, google                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from googleapiclient.discovery import build
@@ -54,6 +55,12 @@ def google_callback():
 
     # Fetch user info from Google API
     user_info = get_user_info(credentials)
+
+#! Google Login Route                                                                                                                                                                                                                                                                                                                                           
+@app.route("/google_login")
+def google_login():
+    if not google.authorized:
+        return redirect(url_for("google.login"))
     
     # Check if user exists or create a new user
     user = User.query.filter_by(email=user_info['email']).first()
@@ -102,6 +109,14 @@ def get_user_info(credentials):
     }
 
 # Database Configuration
+
+@app.route('/callback', methods=['POST'])
+def mpesa_callback():
+    data = request.get_json()
+    print("Received Callback:", data)  # Debugging
+    return jsonify({"message": "Callback received"}), 200
+
+#! Database Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///rental.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "supersecretkey")

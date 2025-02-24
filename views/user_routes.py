@@ -84,6 +84,7 @@ def fetch_user(id):
         "created_at": user.created_at
     }), 200  
 
+
 #! ✅ FETCH ALL USERS (Admin Only). Integrate Pagination ...
 @user_bp.route("/users", methods=['GET'])
 @jwt_required()
