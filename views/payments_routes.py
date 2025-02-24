@@ -78,7 +78,7 @@ def update_payment(id):
     for key, value in data.items():
         if hasattr(payment, key):
             setattr(payment, key, value)
-    
+
     payment.timestamp = datetime.utcnow()  # Update timestamp on edit
     db.session.commit()
 
