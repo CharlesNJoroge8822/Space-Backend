@@ -3,6 +3,11 @@ from models import Payment, db
 from datetime import datetime
 import uuid
 from utils.mpesa_helper import stk_push
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + "/.."))
+
 
 payment_bp = Blueprint("payment_bp", __name__)
 
@@ -53,7 +58,7 @@ def initiate_stk_push():
 @payment_bp.route('/callback', methods=['POST'])
 def handle_callback():
     callback_data = request.json
-
+    print("Received callback:", callback_data)
     # Check the result code
     result_code = callback_data['Body']['stkCallback']['ResultCode']
     if result_code != 0:
@@ -71,11 +76,12 @@ def handle_callback():
             amount = item['Value']
         elif item['Name'] == 'PhoneNumber':
             phone_number = item['Value']
-            
-
     # Return a success response to the M-Pesa server
     response_data = {'ResultCode': result_code, 'ResultDesc': 'Success'}
-    return jsonify(response_data)
+    # return jsonify(response_data)
+    return jsonify({"message": "Callback received"}), 200
+
+
 #! FETCH SINGLE PAYMENT
 @payment_bp.route("/payments/<int:id>", methods=['GET'])
 def fetch_payment(id):

@@ -2,7 +2,7 @@ from utils.mpesa_helper import stk_push
 
 print("Starting STK Push Test...")  # appear
 
-phone = "254707645624"
+phone = "254742386703"
 amount = 10
 order_id = "ORDER123"
 

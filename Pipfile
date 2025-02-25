@@ -16,6 +16,8 @@ flask-dance = "*"
 flask-jwt-extended = "*"
 gunicorn = "*"
 requests = "*"
+google-auth-oauthlib = "*"
+google-api-python-client = "*"
 
 [dev-packages]
 

@@ -6,10 +6,10 @@ from requests.auth import HTTPBasicAuth
 
 #! MPESA Credentials
 BUSINESS_SHORTCODE = "174379"
-LIPA_NA_MPESA_PASSKEY = "YOUR_PASSKEY"
+LIPA_NA_MPESA_PASSKEY = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
 CONSUMER_KEY = "THvIUGYncNdfjQyUIqO8w1kWAMoi1Xr2cshUYhZfkFMvpgQR"
 CONSUMER_SECRET = "dCTaBJNhm3zLJ3YfPJeZDAd2GTbx0nP0RlIHOVcFYKzgIBlAyoLrw0OrjV9d1pbO"
-CALLBACK_URL = "http://127.0.0.1:5000/callback"
+CALLBACK_URL = "https://space-backend-2.onrender.com/callback"
 
 #! Get access token
 def get_access_token():

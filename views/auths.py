@@ -123,7 +123,7 @@ def register_user():
     }), 201
     
 
-# ! User sends a request for wanting ti reset their password ..
+# ! User sends a request for wanting to reset their password ..
 @auth_bp.route("/request_password_reset", methods=["POST"])
 def request_password_reset():
     """Generate a password reset token and send it to the user."""
