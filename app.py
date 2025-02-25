@@ -18,7 +18,6 @@ from dotenv import load_dotenv
 from models import db, User, Space, Booking, Payment, Agreement, TokenBlockList  
 from redis import Redis
 
-
 # ✅ Load environment variables
 load_dotenv()
 
@@ -160,17 +159,17 @@ def get_user_info(credentials):
         "email": user_info["email"],
         "name": user_info["name"],
         "picture": user_info["picture"]
+      
     }
-
 # ✅ Mpesa Payment Callback Route (Debugging)
 @app.route("/callback", methods=["POST"])
 def mpesa_callback():
-    """Handles Mpesa payment callbacks."""
-    data = request.get_json()
-    logging.info(f"📩 Received Mpesa Callback: {data}")
-    return jsonify({"message": "Callback received"}), 200
+  """Handles Mpesa payment callbacks."""
+  data = request.get_json()
+  logging.info(f"📩 Received Mpesa Callback: {data}")
+  return jsonify({"message": "Callback received"}), 200
 
-# ✅ Register Blueprints (Modular Routes)
+# ✅ Register Blueprints
 from views.user_routes import user_bp
 from views.space_routes import space_bp
 from views.bookings import booking_bp
@@ -185,7 +184,7 @@ app.register_blueprint(payment_bp)
 app.register_blueprint(agreement_bp)
 app.register_blueprint(auth_bp)
 
-# ✅ Create Database Tables (Ensures tables are created)
+# ✅ Create Database Tables
 with app.app_context():
     db.create_all()
 
