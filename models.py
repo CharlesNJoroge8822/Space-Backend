@@ -1,5 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+import random
+import string
 
 db = SQLAlchemy()  #! Initialize DB
 class User(db.Model):
@@ -12,6 +14,13 @@ class User(db.Model):
     role = db.Column(db.String(50), nullable=False, default="Client")  
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     image = db.Column(db.String(200), nullable=True, default="default.jpg")
+    reset_token = db.Column(db.String(8), unique=True, nullable=True)
+
+    def generate_reset_token(self):
+        """Generate a unique 8-character reset token and update it in the database."""
+        self.reset_token = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+        db.session.commit()
+
 
     bookings = db.relationship('Booking', backref='user', lazy=True)
     payments = db.relationship('Payment', backref='user', lazy=True)
