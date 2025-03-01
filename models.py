@@ -4,6 +4,7 @@ import random
 import string
 
 db = SQLAlchemy()  #! Initialize DB
+
 class User(db.Model):
     __tablename__ = 'users'
 
@@ -26,7 +27,6 @@ class User(db.Model):
     payments = db.relationship('Payment', backref='user', lazy=True)
     agreements = db.relationship('Agreement', backref='user', lazy=True)
 
-
 class Space(db.Model):
     __tablename__ = 'spaces'  
 
@@ -43,7 +43,6 @@ class Space(db.Model):
     bookings = db.relationship('Booking', backref='space', lazy=True)  #! Multiple bookings allowed
 
 
-
 class Booking(db.Model):
     __tablename__ = 'bookings'
 
@@ -51,7 +50,7 @@ class Booking(db.Model):
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
     total_amount = db.Column(db.Float, nullable=False)
-    status = db.Column(db.String(50), default="Pending")
+    status = db.Column(db.String(50), default="Pending Payment")  # Default status
 
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     space_id = db.Column(db.Integer, db.ForeignKey('spaces.id'), nullable=False)
@@ -62,11 +61,10 @@ class Booking(db.Model):
     def is_space_available(space_id, start_time, end_time):
         existing_booking = Booking.query.filter(
             Booking.space_id == space_id,
-            Booking.status == "Confirmed",  
+            Booking.status == "Confirmed",  # Only check confirmed bookings
             Booking.end_time > start_time  
         ).first()
         return existing_booking is None
-
 
 class Agreement(db.Model):
     __tablename__ = 'agreements'
