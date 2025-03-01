@@ -15,7 +15,7 @@ def validate_id_number(id_number):
 # Process Payment
 def process_payment(phone_number, id_number, amount, order_id):
     if not validate_phone_number(phone_number):
-        return {"error": "Invalid phone number. Use 2547XXXXXXXX format."}
+        return {"error": "Invalid phone number. Use 2541XXXXXXXX format."}
     if not validate_id_number(id_number):
         return {"error": "Invalid ID number."}
     

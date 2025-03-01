@@ -7,7 +7,7 @@ import logging
 from flask import Flask, redirect, url_for, jsonify, request, session
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager , jwt_required, get_jwt_identity
 from flask_cors import CORS
 from flask_mail import Mail, Message
 from flask_limiter import Limiter
@@ -17,7 +17,8 @@ from googleapiclient.discovery import build
 from dotenv import load_dotenv
 from models import db, User, Space, Booking, Payment, Agreement, TokenBlockList  
 from redis import Redis
-
+import cloudinary
+# mpesa
 # ✅ Load environment variables
 load_dotenv()
 
@@ -25,11 +26,11 @@ load_dotenv()
 app = Flask(__name__)
 
 # ✅ Enable CORS
-CORS(app)
+CORS(app)  # Enable CORS for all routes
 
 # ✅ Security Configurations
-app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
-os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # Allow HTTP for development
+# app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
+# os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # Allow HTTP for development
 
 # ✅ Database Configuration
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///rental.db")
@@ -80,6 +81,7 @@ try:
         json.load(f)  # Test JSON format
 except json.JSONDecodeError:
     raise ValueError("❌ Error: client_secret.json is not a valid JSON file!")
+
 
 # ✅ Google Login Authorization Route
 @app.route("/authorize_google")
@@ -138,7 +140,7 @@ def google_callback():
         "role": user.role
     }
 
-    return redirect(f"http://localhost:5173/profile?user_id={user.id}&name={user.name}&email={user.email}&role={user.role}")
+    return redirect(f"http://localhost:5173/login")
 
 def credentials_to_dict(credentials):
     """Converts credentials to a dictionary."""
@@ -161,6 +163,45 @@ def get_user_info(credentials):
         "picture": user_info["picture"]
       
     }
+
+
+@app.route("/upload-image", methods=["POST"])
+@jwt_required()
+def upload_image():
+    try:
+        print("🟢 Received image upload request")
+        print(f"🟢 Request Headers: {request.headers}")  # Debugging
+        print(f"🟢 Request Files: {request.files}")  # Debugging
+        
+        if "file" not in request.files:
+            print("⛔ No file provided in request")
+            return jsonify({"error": "No file provided"}), 400
+
+        file = request.files["file"]
+        print(f"📂 File Received: {file.filename}")
+
+        # Upload to Cloudinary
+        upload_result = cloudinary.uploader.upload(file, folder="profile_pictures")
+        image_url = upload_result["secure_url"]
+        print(f"✅ Cloudinary Upload Success: {image_url}")
+
+        # Get the current user ID from JWT
+        current_user_id = get_jwt_identity()
+        print(f"🔍 Current User ID: {current_user_id}")
+
+        user = User.query.get(current_user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        user.image = image_url
+        db.session.commit()
+        print(f"✅ User {user.id} profile image updated in DB")
+
+        return jsonify({"image_url": image_url, "message": "Image uploaded and saved successfully!"}), 200
+    except Exception as e:
+        print(f"❌ Error Uploading Image: {e}")
+        return jsonify({"error": str(e)}), 500
+    
 # ✅ Mpesa Payment Callback Route (Debugging)
 @app.route("/callback", methods=["POST"])
 def mpesa_callback():
