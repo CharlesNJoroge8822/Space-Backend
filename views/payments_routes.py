@@ -4,6 +4,8 @@ from datetime import datetime
 import uuid
 from utils.mpesa_helper import stk_push
 import logging
+from flask_jwt_extended import jwt_required, get_jwt_identity
+
 
 payment_bp = Blueprint("payment_bp", __name__)
 
@@ -136,12 +138,32 @@ def update_payment(id):
 
 #! DELETE PAYMENT
 @payment_bp.route('/payments/<int:id>', methods=['DELETE'])
+@jwt_required()  # Require authentication
 def delete_payment(id):
-    payment = Payment.query.get(id)
-    if not payment:
-        return jsonify({"error": "Payment not found"}), 404
+    try:
+        # Debugging: Log token received
+        auth_header = request.headers.get("Authorization")
+        print("Received Authorization Header:", auth_header)
 
-    db.session.delete(payment)
-    db.session.commit()
+        current_user_id = get_jwt_identity()
+        print("Decoded JWT User ID:", current_user_id)
 
-    return jsonify({"message": "Payment deleted successfully"}), 200
+        # Fetch payment
+        payment = Payment.query.get(id)
+
+        if not payment:
+            return jsonify({"error": "Payment not found"}), 404
+
+        # Ensure the user owns the payment OR is an admin
+        if payment.user_id != current_user_id:
+            return jsonify({"error": "Unauthorized to delete this payment"}), 403
+
+        # Delete the payment
+        db.session.delete(payment)
+        db.session.commit()
+
+        return jsonify({"message": "Payment deleted successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to delete payment", "details": str(e)}), 500
