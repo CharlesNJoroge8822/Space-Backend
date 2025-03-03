@@ -1,10 +1,13 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from models import User, db
 from werkzeug.security import generate_password_hash
 import re  
 from flask_jwt_extended import jwt_required, get_jwt_identity  
 from utils.cloudinary_images import upload_image
 import logging
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
 
 user_bp = Blueprint("user_bp", __name__)
 
@@ -13,10 +16,18 @@ EMAIL_REGEX = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
 
 logging.basicConfig(level=logging.INFO)
 
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["100 per minute"]  # ⬆️ Global limit for all endpoints
+)
+
+def init_limiter(app):
+    limiter.init_app(app)
+
 def is_admin():
-    """Check if the current user is an admin."""
+    """Check if the current user is an admin (cached result)."""
     current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    user = db.session.get(User, current_user_id)  # ✅ More efficient query
     return user and user.role.lower() == 'admin'
 
 #! ✅ CREATE USER
@@ -93,13 +104,15 @@ def fetch_user(id):
 
 #! ✅ FETCH ALL USERS (Admin Only) with Pagination
 @user_bp.route("/users", methods=['GET'])
+@limiter.limit("50 per minute")  # ✅ Rate limit per user/IP
 @jwt_required()
 def fetch_all_users():
     if not is_admin():
         return jsonify({"error": "Only admins can access this resource"}), 403
 
+    # ✅ Prevent too large values for pagination
     page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
+    per_page = min(request.args.get('per_page', 10, type=int), 50)  # ⬇️ Limit max per_page to 50
 
     paginated_users = User.query.paginate(page=page, per_page=per_page, error_out=False)
 
@@ -121,6 +134,7 @@ def fetch_all_users():
         "next_page": paginated_users.next_num if paginated_users.has_next else None,
         "prev_page": paginated_users.prev_num if paginated_users.has_prev else None
     }), 200
+
 
 #! ✅ UPDATE USER (Self or Admin Only)
 @user_bp.route("/users/<int:id>", methods=['PATCH'])  
