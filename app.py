@@ -29,8 +29,8 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
 # ✅ Security Configurations
-# app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
-# os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # Allow HTTP for development
+app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # Allow HTTP for development
 
 # ✅ Database Configuration
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///rental.db")

@@ -2,6 +2,8 @@
 url = "https://pypi.org/simple"
 verify_ssl = true
 name = "pypi"
+
+[packages]
 flask = "*"
 flask-sqlalchemy = "*"
 werkzeug = "*"
@@ -14,13 +16,11 @@ flask-jwt-extended = "*"
 gunicorn = "*"
 requests = "*"
 flask-mail = "*"
-redis = "*"
 flask-limiter = "*"
+redis = "*"
+flask-login = "*"
+
+[dev-packages]
 
 [requires]
 python_version = "3.8"
-
-[packages]
-ngrok = "*"
-
-[dev-packages]

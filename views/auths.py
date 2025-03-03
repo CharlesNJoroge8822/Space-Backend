@@ -14,6 +14,32 @@ import json  # ✅ Fix for 'name json is not defined'
 
 auth_bp = Blueprint("auth_bp", __name__)
 
+@auth_bp.route("/googlelogin", methods=["POST"])
+def googlelogin():
+    data = request.get_json()
+    email = data.get("email")
+    
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+
+    user = User.query.filter_by(email=email).first()
+
+    if not user:
+        return jsonify({"error": "No user found with this email"}), 401
+
+    access_token = create_access_token(identity=str(user.id), expires_delta=timedelta(hours=1))
+
+    return jsonify({
+        "access_token": access_token,
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role,
+            "is_admin": user.role.lower() == "admin"
+        }
+    }), 200
+
 # ✅ LOGIN ROUTE
 @auth_bp.route("/login", methods=["POST"])
 def login():
