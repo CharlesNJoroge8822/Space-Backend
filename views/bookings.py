@@ -3,7 +3,7 @@ from models import Booking, db
 from datetime import datetime
 import re
 from flask_cors import cross_origin
-# from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 booking_bp = Blueprint("booking_bp", __name__)
 
@@ -149,13 +149,28 @@ def update_booking_status(id):
 
 # Delete Booking
 @booking_bp.route('/bookings/<int:id>', methods=['DELETE'])
+@jwt_required()
 def delete_booking(id):
     try:
+        # Debug: Log received JWT token
+        auth_header = request.headers.get("Authorization")
+        print("Received Authorization Header:", auth_header)
+
+        # Extract the user ID from the token
+        current_user_id = get_jwt_identity()
+        print("Decoded JWT User ID:", current_user_id)
+
+        # Retrieve the booking
         booking = Booking.query.get(id)
 
-        if booking is None:
+        if not booking:
             return jsonify({"error": "Booking not found"}), 404
 
+        # Ensure the user owns the booking OR is an admin
+        if booking.user_id != current_user_id:
+            return jsonify({"error": "Unauthorized to delete this booking"}, 403)
+
+        # Delete the booking
         db.session.delete(booking)
         db.session.commit()
 

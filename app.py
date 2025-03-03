@@ -26,8 +26,13 @@ load_dotenv()
 app = Flask(__name__)
 
 # ✅ Enable CORS
-CORS(app)  # Enable CORS for all routes
-
+CORS(
+    app, 
+    supports_credentials=True, 
+    origins=["http://localhost:5173"], 
+    methods=["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"]
+)
 # ✅ Security Configurations
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # Allow HTTP for development
