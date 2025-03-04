@@ -14,6 +14,7 @@ def is_valid_date(date_str):
         return True
     except ValueError:
         return False
+    
 @booking_bp.route("/bookings", methods=['POST'])
 def create_booking():
     try:
@@ -69,27 +70,47 @@ def create_booking():
         db.session.rollback()
         return jsonify({"error": "An error occurred while processing the booking", "details": str(e)}), 500
 
-# Fetch Booking by ID
-@booking_bp.route("/bookings/<int:id>", methods=['GET'])
-def fetch_booking(id):
+# get single book
+@booking_bp.route("/my-bookings", methods=['GET'])
+def fetch_my_bookings():
     try:
-        booking = Booking.query.get(id)
+        # Remove JWT logic and set a dummy user ID for testing purposes
+        current_user_id = 1  # Replace with a valid user ID, or remove this line entirely for no authentication
 
-        if booking is None:
-            return jsonify({"error": "Booking not found"}), 404
+        print(f"🔍 Fetching bookings for user ID: {current_user_id}")
 
-        return jsonify({
-            "id": booking.id,
-            "user_id": booking.user_id,
-            "space_id": booking.space_id,
-            "start_time": booking.start_time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "end_time": booking.end_time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "total_amount": booking.total_amount,
-            "status": booking.status
-        }), 200
+        # Fetch user's bookings
+        user_bookings = Booking.query.filter_by(user_id=current_user_id).all()
+        if not user_bookings:
+            print("⚠️ No bookings found!")
+            return jsonify({"bookings": []}), 200
+
+        # Handle potential missing space relationships
+        bookings_list = []
+        for booking in user_bookings:
+            if not booking.space:
+                print(f"⚠️ Booking ID {booking.id} has no associated space!")
+                continue  # Skip bookings with missing space
+
+            bookings_list.append({
+                "id": booking.id,
+                "space": {
+                    "id": booking.space.id if booking.space else None,
+                    "name": booking.space.name if booking.space else "Unknown Space"
+                },
+                "start_time": booking.start_time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "end_time": booking.end_time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "total_amount": booking.total_amount,
+                "status": booking.status
+            })
+
+        print("✅ Successfully fetched bookings:", bookings_list)
+        return jsonify({"bookings": bookings_list}), 200
 
     except Exception as e:
-        return jsonify({"error": "Failed to fetch booking", "details": str(e)}), 500
+        print(f"🚨 ERROR in `/my-bookings`: {e}")
+        return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
+
 
 # Fetch all Bookings with Pagination
 @booking_bp.route("/bookings", methods=['GET'])

@@ -30,7 +30,7 @@ CORS(
     app, 
     supports_credentials=True, 
     origins=["http://localhost:5173"], 
-    methods=["GET", "POST", "DELETE", "PATCH", "OPTIONS"],
+    methods=["GET", "POST", "DELETE", "PATCH"],
     allow_headers=["Content-Type", "Authorization"]
 )
 # ✅ Security Configurations

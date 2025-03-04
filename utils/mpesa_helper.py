@@ -7,8 +7,8 @@ from requests.auth import HTTPBasicAuth
 #! MPESA Credentials
 BUSINESS_SHORTCODE = "174379"
 LIPA_NA_MPESA_PASSKEY = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
-CONSUMER_KEY = "THvIUGYncNdfjQyUIqO8w1kWAMoi1Xr2cshUYhZfkFMvpgQR"
-CONSUMER_SECRET = "dCTaBJNhm3zLJ3YfPJeZDAd2GTbx0nP0RlIHOVcFYKzgIBlAyoLrw0OrjV9d1pbO"
+CONSUMER_KEY = "NEiMvmKSe1IvJN4NNYBJa8xGSzMN3aonGfQzsbJeW9aWFCfJ"
+CONSUMER_SECRET = "hADmxusyVFBHSJXWkNZwuid8xtxaTfkfn2VNc2qiYtU7IvP4I5tUPTse6wxTga4t"
 CALLBACK_URL = "https://ec35-102-0-8-22.ngrok-free.app/callback"
 
 #! Get access token
