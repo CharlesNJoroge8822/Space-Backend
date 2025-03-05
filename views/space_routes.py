@@ -3,7 +3,7 @@ from models import Space, db, Booking
 
 space_bp = Blueprint("space_bp", __name__)
 
-#! ✅ CREATE SPACE
+#! ✅ CREATE SPACE (Default Availability: "Available")
 @space_bp.route("/spaces", methods=['POST'])
 def create_space():
     data = request.get_json()
@@ -14,13 +14,11 @@ def create_space():
     price_per_hour = data.get("price_per_hour")
     price_per_day = data.get("price_per_day")
     availability = data.get("availability", "Available")  # ✅ Default to "Available"
-    images = data.get("images")  #! Comma-separated URLs
+    images = data.get("images")
 
-    #! ✅ Validate required fields
     if not all([name, description, location, price_per_hour, price_per_day]):
         return jsonify({"error": "Missing required fields"}), 400
 
-    #! ✅ Check if space already exists
     existing_space = Space.query.filter_by(name=name).first()
     if existing_space:
         return jsonify({"error": "Space with this name already exists"}), 400
@@ -31,11 +29,10 @@ def create_space():
         location=location,
         price_per_hour=price_per_hour,
         price_per_day=price_per_day,
-        availability=availability,  # ✅ Use the provided availability or default to "Available"
+        availability=availability,
         images=images
     )
 
-    #! ✅ Save to database
     db.session.add(new_space)
     db.session.commit()
 
@@ -46,22 +43,19 @@ def create_space():
         "location": new_space.location,
         "price_per_hour": new_space.price_per_hour,
         "price_per_day": new_space.price_per_day,
-        "availability": new_space.availability,  # ✅ Return the actual availability value
+        "availability": new_space.availability,  # ✅ Returns actual availability
         "images": new_space.images
     }), 201
 
 
-#! ✅ FETCH ALL SPACES
+#! ✅ FETCH ALL SPACES (Paginated)
 @space_bp.route("/spaces", methods=['GET'])
 def get_all_spaces():
-    # ! Pagination Variables
-    page = request.args.get('page', 1, type=int)  # Page number
-    per_page = request.args.get('per_page', 10, type=int)  # Items per page
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
 
-    # ! Corrected Pagination Query
     paginated_spaces = Space.query.paginate(page=page, per_page=per_page, error_out=False)
 
-    # ! Loop Through Paginated Results
     spaces_list = [{
         "id": space.id,
         "name": space.name,
@@ -69,34 +63,29 @@ def get_all_spaces():
         "location": space.location,
         "price_per_hour": space.price_per_hour,
         "price_per_day": space.price_per_day,
-        "availability": space.availability,  # ✅ Use the actual availability value
+        "availability": space.availability,
         "images": space.images
     } for space in paginated_spaces.items]
 
-    # ! Return Paginated Data
     return jsonify({
         "spaces": spaces_list,
-        "total_spaces": paginated_spaces.total,  # Total spaces in DB
-        "total_pages": paginated_spaces.pages,  # Total pages
-        "current_page_number": paginated_spaces.page,  # Current page number
-        "spaces_per_page": paginated_spaces.per_page  # Spaces per page
+        "total_spaces": paginated_spaces.total,
+        "total_pages": paginated_spaces.pages,
+        "current_page_number": paginated_spaces.page,
+        "spaces_per_page": paginated_spaces.per_page
     }), 200
 
 
-#! ✅ FETCH SINGLE SPACE
+#! ✅ FETCH SINGLE SPACE (Includes Booking Details)
 @space_bp.route("/spaces/<int:space_id>", methods=['GET'])
 def get_space(space_id):
-    # Fetch the space from the database
     space = Space.query.get(space_id)
 
-    # Check if the space exists
     if not space:
         return jsonify({"error": "Space not found"}), 404
 
-    # Fetch related bookings for the space
     bookings = Booking.query.filter_by(space_id=space.id).all()
 
-    # Prepare the response data
     space_data = {
         "id": space.id,
         "name": space.name,
@@ -110,8 +99,8 @@ def get_space(space_id):
             {
                 "id": booking.id,
                 "user_id": booking.user_id,
-                "start_time": booking.start_time,
-                "end_time": booking.end_time,
+                "start_time": booking.start_time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "end_time": booking.end_time.strftime("%Y-%m-%dT%H:%M:%S"),
                 "total_amount": booking.total_amount,
                 "status": booking.status,
                 "user_details": {
@@ -128,7 +117,7 @@ def get_space(space_id):
     return jsonify(space_data), 200
 
 
-#! ✅ UPDATE SPACE
+#! ✅ UPDATE SPACE DETAILS
 @space_bp.route("/spaces/<int:space_id>", methods=['PATCH'])
 def update_space(space_id):
     space = Space.query.get(space_id)
@@ -138,7 +127,6 @@ def update_space(space_id):
 
     data = request.get_json()
 
-    #! ✅ Update only the provided fields
     if "name" in data:
         space.name = data["name"]
     if "description" in data:
@@ -150,7 +138,7 @@ def update_space(space_id):
     if "price_per_day" in data:
         space.price_per_day = data["price_per_day"]
     if "availability" in data:
-        space.availability = data["availability"]  # ✅ Update availability for this space
+        space.availability = data["availability"]  # ✅ Update availability
     if "images" in data:
         space.images = data["images"]
 
@@ -159,13 +147,39 @@ def update_space(space_id):
     return jsonify({"message": "Space updated successfully"}), 200
 
 
-#! ✅ DELETE SPACE
+#! ✅ UPDATE SPACE AVAILABILITY (After Booking & Payment)
+@space_bp.route("/spaces/<int:space_id>/availability", methods=['PATCH'])
+def update_space_availability(space_id):
+    space = Space.query.get(space_id)
+
+    if not space:
+        return jsonify({"error": "Space not found"}), 404
+
+    data = request.get_json()
+    if "availability" not in data:
+        return jsonify({"error": "Missing availability field"}), 400
+
+    space.availability = "Booked" if not data["availability"] else "Available"
+    db.session.commit()
+
+    return jsonify({
+        "id": space.id,
+        "availability": space.availability,
+        "message": f"Space status updated to {space.availability}"
+    }), 200
+
+
+#! ✅ DELETE SPACE (Only if No Active Bookings)
 @space_bp.route("/spaces/<int:space_id>", methods=['DELETE'])
 def delete_space(space_id):
     space = Space.query.get(space_id)
 
     if not space:
         return jsonify({"error": "Space not found"}), 404
+
+    active_bookings = Booking.query.filter_by(space_id=space.id, status="Confirmed").count()
+    if active_bookings > 0:
+        return jsonify({"error": "Cannot delete space with active bookings"}), 400
 
     db.session.delete(space)
     db.session.commit()

@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models import Payment, Booking, db
+from models import Payment, Booking, db, Space
 from datetime import datetime
 import uuid
 from utils.mpesa_helper import stk_push
@@ -100,9 +100,33 @@ def handle_callback():
                 phone_number = item.get('Value')
 
     # Log successful payment
-    logger.info(f"Payment successful for order {checkout_request_id}. Amount: {amount}, Phone: {phone_number}")
+    logger.info(f"✅ Payment successful for order {checkout_request_id}. Amount: {amount}, Phone: {phone_number}")
 
-    return jsonify({"ResultCode": 0, "ResultDesc": "Payment received successfully"})
+    # ✅ Find the payment record using the M-Pesa transaction ID
+    payment = Payment.query.filter_by(mpesa_transaction_id=checkout_request_id).first()
+    if not payment:
+        logger.error(f"🚨 No payment found with transaction ID {checkout_request_id}")
+        return jsonify({"ResultCode": 1, "ResultDesc": "Payment record not found"}), 404
+
+    # ✅ Update payment status to "Confirmed"
+    payment.status = "Confirmed"
+    db.session.commit()
+
+    # ✅ Find the associated booking and update its status
+    booking = Booking.query.get(payment.booking_id)
+    if booking:
+        booking.status = "Booked"
+        db.session.commit()
+        logger.info(f"✅ Booking ID {booking.id} marked as Booked!")
+
+        # ✅ Find the associated space and update availability
+        space = Space.query.get(booking.space_id)
+        if space:
+            space.availability = False  # Mark space as unavailable (Booked)
+            db.session.commit()
+            logger.info(f"🚀 Space ID {space.id} marked as Booked!")
+
+    return jsonify({"ResultCode": 0, "ResultDesc": "Payment received, booking confirmed, and space marked as booked."}), 200
 
 #! FETCH SINGLE PAYMENT
 @payment_bp.route("/payments/<int:id>", methods=['GET'])

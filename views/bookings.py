@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from models import Booking, db
 from datetime import datetime
 import re
+import logger
 from flask_cors import cross_origin
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import User, Space
@@ -15,7 +16,6 @@ def is_valid_date(date_str):
         return True
     except ValueError:
         return False
-    
     
 @booking_bp.route("/bookings", methods=['POST'])
 def create_booking():
@@ -162,26 +162,37 @@ def update_booking_status(id):
     try:
         booking = Booking.query.get(id)
 
-        if booking is None:
+        if not booking:
             return jsonify({"error": "Booking not found"}), 404
 
         data = request.get_json()
         if "status" not in data:
             return jsonify({"error": "Missing status field"}), 400
 
+        # Prevent rebooking if already booked
+        if booking.status == "Booked":
+            return jsonify({"error": "This booking is already confirmed and cannot be changed."}), 400
+
         # Update the booking status
         booking.status = data["status"]
         db.session.commit()
+        logger.info(f"✅ Booking ID {booking.id} updated to {booking.status}")
 
-        return jsonify({
-            "id": booking.id,
-            "status": booking.status,
-            "message": "Booking status updated successfully"
-        }), 200
+        # If booking is confirmed, update the corresponding space availability
+        if booking.status == "Booked":
+            space = Space.query.get(booking.space_id)
+            if space:
+                space.availability = False  # Mark space as unavailable (Booked)
+                db.session.commit()
+                logger.info(f"🚀 Space ID {space.id} marked as Booked!")
+
+        return jsonify({"id": booking.id, "status": booking.status, "message": "Booking status updated successfully"}), 200
 
     except Exception as e:
         db.session.rollback()
+        logger.error(f"🚨 Error updating booking status: {e}")
         return jsonify({"error": "Failed to update booking status", "details": str(e)}), 500
+
 
 # Delete Booking
 @booking_bp.route('/bookings/<int:id>', methods=['DELETE'])
