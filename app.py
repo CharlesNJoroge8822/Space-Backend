@@ -33,7 +33,6 @@ CORS(
     supports_credentials=True
 )
 
-
 # Security Configurations
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # Allow HTTP for development
