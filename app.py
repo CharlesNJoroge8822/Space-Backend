@@ -38,7 +38,7 @@ app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # Allow HTTP for development
 
 #  Database Configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///rental.db")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "postgresql://ivycourt_user:2YZ3PBfebFQkHfUts4O7s6FPMZsU93Vy@dpg-cv3uej3qf0us73b34a90-a.oregon-postgres.render.com/ivycourt")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 #  JWT Configuration

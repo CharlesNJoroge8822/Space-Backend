@@ -19,6 +19,7 @@ flask-mail = "*"
 redis = "*"
 flask-login = "*"
 flask-limiter = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 
