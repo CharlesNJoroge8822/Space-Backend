@@ -29,7 +29,7 @@ app = Flask(__name__)
 
 CORS(
     app,
-    resources={r"/*": {"origins": "https://spacefrontend.vercel.app"}},
+    resources={r"/*": {"origins": "*"}},  # Temporary for debugging
     supports_credentials=True
 )
 
@@ -108,7 +108,7 @@ def authorize_google():
         ],
         redirect_uri="https://space-backend-6.onrender.com/google_login/callback"
     )
-    
+
     authorization_url, state = flow.authorization_url()
     session["state"] = state
     return redirect(authorization_url)
