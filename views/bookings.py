@@ -4,6 +4,7 @@ from datetime import datetime
 import re
 from flask_cors import cross_origin
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from models import User, Space
 
 booking_bp = Blueprint("booking_bp", __name__)
 
@@ -14,6 +15,8 @@ def is_valid_date(date_str):
         return True
     except ValueError:
         return False
+    
+    
 @booking_bp.route("/bookings", methods=['POST'])
 def create_booking():
     try:
@@ -69,46 +72,79 @@ def create_booking():
         db.session.rollback()
         return jsonify({"error": "An error occurred while processing the booking", "details": str(e)}), 500
 
-# Fetch Booking by ID
-@booking_bp.route("/bookings/<int:id>", methods=['GET'])
-def fetch_booking(id):
+# get single book
+@booking_bp.route("/my-bookings", methods=['GET'])
+def fetch_my_bookings():
     try:
-        booking = Booking.query.get(id)
+        # Remove JWT logic and set a dummy user ID for testing purposes
+        current_user_id = 1  # Replace with a valid user ID, or remove this line entirely for no authentication
 
-        if booking is None:
-            return jsonify({"error": "Booking not found"}), 404
+        print(f"🔍 Fetching bookings for user ID: {current_user_id}")
 
-        return jsonify({
-            "id": booking.id,
-            "user_id": booking.user_id,
-            "space_id": booking.space_id,
-            "start_time": booking.start_time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "end_time": booking.end_time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "total_amount": booking.total_amount,
-            "status": booking.status
-        }), 200
+        # Fetch user's bookings
+        user_bookings = Booking.query.filter_by(user_id=current_user_id).all()
+        if not user_bookings:
+            print("⚠️ No bookings found!")
+            return jsonify({"bookings": []}), 200
+
+        # Handle potential missing space relationships
+        bookings_list = []
+        for booking in user_bookings:
+            if not booking.space:
+                print(f"⚠️ Booking ID {booking.id} has no associated space!")
+                continue  # Skip bookings with missing space
+
+            bookings_list.append({
+                "id": booking.id,
+                "space": {
+                    "id": booking.space.id if booking.space else None,
+                    "name": booking.space.name if booking.space else "Unknown Space"
+                },
+                "start_time": booking.start_time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "end_time": booking.end_time.strftime("%Y-%m-%dT%H:%M:%S"),
+                "total_amount": booking.total_amount,
+                "status": booking.status
+            })
+
+        print("✅ Successfully fetched bookings:", bookings_list)
+        return jsonify({"bookings": bookings_list}), 200
 
     except Exception as e:
-        return jsonify({"error": "Failed to fetch booking", "details": str(e)}), 500
+        print(f"🚨 ERROR in `/my-bookings`: {e}")
+        return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
+
 
 # Fetch all Bookings with Pagination
 @booking_bp.route("/bookings", methods=['GET'])
 def fetch_all_bookings():
     try:
+        # Get pagination parameters
         bookings_page = request.args.get('page', 1, type=int)
         per_booking_page = request.args.get('per_page', 10, type=int)
-        
-        paginated_bookings = Booking.query.paginate(page=bookings_page, per_page=per_booking_page, error_out=False)
 
+        # Paginate bookings with user and space info
+        paginated_bookings = db.session.query(
+            Booking, User.name, User.email, Space.name  # Assuming there's a relation to Space
+        ).join(User).join(Space).paginate(
+            page=bookings_page, per_page=per_booking_page, error_out=False
+        )
+
+        # Create response list for bookings
         bookings_list = [{
             "id": booking.id,
-            "user_id": booking.user_id,
-            "space_id": booking.space_id,
+            "user": {
+                "id": booking.user_id,
+                "name": name,
+                "email": email
+            },
+            "space": {
+                "name": space_name  # Display space name
+            },
             "start_time": booking.start_time.strftime("%Y-%m-%dT%H:%M:%S"),
             "end_time": booking.end_time.strftime("%Y-%m-%dT%H:%M:%S"),
             "total_amount": booking.total_amount,
             "status": booking.status
-        } for booking in paginated_bookings.items]
+        } for booking, name, email, space_name in paginated_bookings.items]  # Unpack the results correctly
 
         return jsonify({
             "bookings": bookings_list,
@@ -149,7 +185,6 @@ def update_booking_status(id):
 
 # Delete Booking
 @booking_bp.route('/bookings/<int:id>', methods=['DELETE'])
-@jwt_required()
 def delete_booking(id):
     try:
         # Debug: Log received JWT token
@@ -157,8 +192,8 @@ def delete_booking(id):
         print("Received Authorization Header:", auth_header)
 
         # Extract the user ID from the token
-        current_user_id = get_jwt_identity()
-        print("Decoded JWT User ID:", current_user_id)
+        # current_user_id = get_jwt_identity()
+        # print("Decoded JWT User ID:", current_user_id)
 
         # Retrieve the booking
         booking = Booking.query.get(id)
@@ -167,8 +202,8 @@ def delete_booking(id):
             return jsonify({"error": "Booking not found"}), 404
 
         # Ensure the user owns the booking OR is an admin
-        if booking.user_id != current_user_id:
-            return jsonify({"error": "Unauthorized to delete this booking"}, 403)
+        # if booking.user_id != current_user_id:
+        #     return jsonify({"error": "Unauthorized to delete this booking"}, 403)
 
         # Delete the booking
         db.session.delete(booking)

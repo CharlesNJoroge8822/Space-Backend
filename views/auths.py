@@ -91,12 +91,9 @@ def current_user():
 
 # ✅ LOGOUT ROUTE
 @auth_bp.route("/logout", methods=["DELETE"])
-@jwt_required()
 def logout():
-    """Blacklist a token on logout."""
-    jti = get_jwt()["jti"]
-    db.session.add(TokenBlockList(jti=jti, created_at=datetime.now(timezone.utc)))
-    db.session.commit()
+    """Handle logout without using JWT."""
+    # Simply return a success message since there's no JWT to manage
     return jsonify({"success": "Logged out successfully"}), 200
 
 

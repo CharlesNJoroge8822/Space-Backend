@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models import Space, db
+from models import Space, db, Booking
 
 space_bp = Blueprint("space_bp", __name__)
 
@@ -13,11 +13,11 @@ def create_space():
     location = data.get("location")
     price_per_hour = data.get("price_per_hour")
     price_per_day = data.get("price_per_day")
-    availability = data.get("availability")  #! JSON string
+    availability = data.get("availability", "Available")  # ✅ Default to "Available"
     images = data.get("images")  #! Comma-separated URLs
 
     #! ✅ Validate required fields
-    if not all([name, description, location, price_per_hour, price_per_day, availability]):
+    if not all([name, description, location, price_per_hour, price_per_day]):
         return jsonify({"error": "Missing required fields"}), 400
 
     #! ✅ Check if space already exists
@@ -31,7 +31,7 @@ def create_space():
         location=location,
         price_per_hour=price_per_hour,
         price_per_day=price_per_day,
-        availability=availability,
+        availability=availability,  # ✅ Use the provided availability or default to "Available"
         images=images
     )
 
@@ -46,7 +46,7 @@ def create_space():
         "location": new_space.location,
         "price_per_hour": new_space.price_per_hour,
         "price_per_day": new_space.price_per_day,
-        "availability": new_space.availability,
+        "availability": new_space.availability,  # ✅ Return the actual availability value
         "images": new_space.images
     }), 201
 
@@ -55,11 +55,11 @@ def create_space():
 @space_bp.route("/spaces", methods=['GET'])
 def get_all_spaces():
     # ! Pagination Variables
-    space = request.args.get('page', 1, type=int)  # Page number
-    per_space = request.args.get('per_page', 10, type=int)  # Items per page
+    page = request.args.get('page', 1, type=int)  # Page number
+    per_page = request.args.get('per_page', 10, type=int)  # Items per page
 
     # ! Corrected Pagination Query
-    paginated_spaces = Space.query.paginate(page=space, per_page=per_space, error_out=False)
+    paginated_spaces = Space.query.paginate(page=page, per_page=per_page, error_out=False)
 
     # ! Loop Through Paginated Results
     spaces_list = [{
@@ -69,7 +69,7 @@ def get_all_spaces():
         "location": space.location,
         "price_per_hour": space.price_per_hour,
         "price_per_day": space.price_per_day,
-        "availability": space.availability,
+        "availability": space.availability,  # ✅ Use the actual availability value
         "images": space.images
     } for space in paginated_spaces.items]
 
@@ -86,12 +86,18 @@ def get_all_spaces():
 #! ✅ FETCH SINGLE SPACE
 @space_bp.route("/spaces/<int:space_id>", methods=['GET'])
 def get_space(space_id):
+    # Fetch the space from the database
     space = Space.query.get(space_id)
 
+    # Check if the space exists
     if not space:
         return jsonify({"error": "Space not found"}), 404
 
-    return jsonify({
+    # Fetch related bookings for the space
+    bookings = Booking.query.filter_by(space_id=space.id).all()
+
+    # Prepare the response data
+    space_data = {
         "id": space.id,
         "name": space.name,
         "description": space.description,
@@ -99,8 +105,28 @@ def get_space(space_id):
         "price_per_hour": space.price_per_hour,
         "price_per_day": space.price_per_day,
         "availability": space.availability,
-        "images": space.images
-    }), 200
+        "images": space.images,
+        "bookings": [
+            {
+                "id": booking.id,
+                "user_id": booking.user_id,
+                "start_time": booking.start_time,
+                "end_time": booking.end_time,
+                "total_amount": booking.total_amount,
+                "status": booking.status,
+                "user_details": {
+                    "id": booking.user.id,
+                    "name": booking.user.name,
+                    "email": booking.user.email,
+                    "image": booking.user.image,
+                } if booking.user else None,
+            }
+            for booking in bookings
+        ],
+    }
+
+    return jsonify(space_data), 200
+
 
 #! ✅ UPDATE SPACE
 @space_bp.route("/spaces/<int:space_id>", methods=['PATCH'])
@@ -124,13 +150,14 @@ def update_space(space_id):
     if "price_per_day" in data:
         space.price_per_day = data["price_per_day"]
     if "availability" in data:
-        space.availability = data["availability"]
+        space.availability = data["availability"]  # ✅ Update availability for this space
     if "images" in data:
         space.images = data["images"]
 
     db.session.commit()
 
     return jsonify({"message": "Space updated successfully"}), 200
+
 
 #! ✅ DELETE SPACE
 @space_bp.route("/spaces/<int:space_id>", methods=['DELETE'])
