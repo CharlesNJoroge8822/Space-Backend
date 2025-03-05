@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "64800f0f6f2bacd3c897db03d77211aea3ab6a4abc38749a618a22d5bc4c05c6"
+            "sha256": "7617dbeee98bf528a3e61e4f820d842e93f49b504757eaba959f96509fc153bd"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -9,23 +9,9 @@
         },
         "sources": [
             {
-                "cloudinary": "*",
-                "flask": "*",
-                "flask-cors": "*",
-                "flask-dance": "*",
-                "flask-jwt-extended": "*",
-                "flask-limiter": "*",
-                "flask-mail": "*",
-                "flask-migrate": "*",
-                "flask-sqlalchemy": "*",
-                "gunicorn": "*",
                 "name": "pypi",
-                "python-dotenv": "*",
-                "redis": "*",
-                "requests": "*",
                 "url": "https://pypi.org/simple",
-                "verify_ssl": true,
-                "werkzeug": "*"
+                "verify_ssl": true
             }
         ]
     },

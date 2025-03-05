@@ -85,22 +85,48 @@ def create_user():
         logging.error(f"❌ Error creating user: {e}")
         return jsonify({"error": str(e)}), 500
 
-#! ✅ FETCH SINGLE USER
+# fetch user by ID
 @user_bp.route("/users/<int:id>", methods=['GET'])
 def fetch_user(id):
+    # Fetch the user from the database
     user = User.query.get(id)
 
+    # Check if the user exists
     if not user:
         return jsonify({"error": "User with ID not found"}), 404
-    
-    return jsonify({
+
+    # Prepare the response data
+    user_data = {
         "id": user.id,
         "name": user.name,
         "email": user.email,
         "role": user.role,
         "image": user.image,
-        "created_at": user.created_at
-    }), 200  
+        "created_at": user.created_at,
+        "updated_at": user.updated_at,  # Include updated_at if available
+        "bookings": [
+            {
+                "id": booking.id,
+                "space_id": booking.space_id,
+                "start_time": booking.start_time,
+                "end_time": booking.end_time,
+                "total_amount": booking.total_amount,
+                "status": booking.status,
+                "space_details": {
+                    "id": booking.space.id,
+                    "name": booking.space.name,
+                    "location": booking.space.location,
+                    "price_per_hour": booking.space.price_per_hour,
+                    "price_per_day": booking.space.price_per_day,
+                    "availability": booking.space.availability,
+                    "images": booking.space.images,
+                } if booking.space else None,
+            }
+            for booking in user.bookings
+        ],
+    }
+
+    return jsonify(user_data), 200 
 
 #! ✅ FETCH ALL USERS (Admin Only) with Pagination
 @user_bp.route("/users", methods=['GET'])
@@ -135,20 +161,17 @@ def fetch_all_users():
         "prev_page": paginated_users.prev_num if paginated_users.has_prev else None
     }), 200
 
-
 #! ✅ UPDATE USER (Self or Admin Only)
 @user_bp.route("/users/<int:id>", methods=['PATCH'])  
-@jwt_required()
 def update_user(id):
     try:
-        current_user_id = int(get_jwt_identity())
         user = User.query.get(id)
 
         if not user:
             return jsonify({"error": "User not found"}), 404
 
-        if current_user_id != user.id and not is_admin():
-            return jsonify({"error": "Unauthorized"}), 403
+        # Remove token-based checks (previously checking for logged-in user)
+        # If the backend requires some form of session management, you may need to adjust the logic accordingly.
 
         data = request.get_json()
         name = data.get("name")

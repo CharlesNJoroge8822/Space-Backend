@@ -16,9 +16,9 @@ flask-jwt-extended = "*"
 gunicorn = "*"
 requests = "*"
 flask-mail = "*"
-flask-limiter = "*"
 redis = "*"
 flask-login = "*"
+flask-limiter = "*"
 
 [dev-packages]
 
