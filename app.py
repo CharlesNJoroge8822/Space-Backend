@@ -7,7 +7,7 @@ import logging
 from flask import Flask, redirect, url_for, jsonify, request, session
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash
-from flask_jwt_extended import JWTManager , jwt_required, get_jwt_identity
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
 from flask_cors import CORS
 from flask_mail import Mail, Message
 from flask_limiter import Limiter
@@ -15,38 +15,37 @@ from flask_limiter.util import get_remote_address
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
-from models import db, User, Space, Booking, Payment, Agreement, TokenBlockList  
+from models import db, User, Space, Booking, Payment, Agreement, TokenBlockList
 from redis import Redis
 import cloudinary
-# mpesa
-#  Load environment variables
+
+# Load environment variables
 load_dotenv()
 
-#  Initialize Flask App
+# Initialize Flask App
 app = Flask(__name__)
 
-#  Enable CORS
+# Enable CORS
 CORS(
-    app, 
-    supports_credentials=True, 
-    origins=["https://spacefrontend.vercel.app"], 
-    methods=["GET", "POST", "DELETE", "PATCH"],
+    app,
+    supports_credentials=True,
+    origins=["https://spacefrontend.vercel.app"],  # Remove the trailing slash
+    methods=["GET", "POST", "DELETE", "PATCH", "OPTIONS"],  # Add OPTIONS for preflight requests
     allow_headers=["Content-Type", "Authorization"]
 )
 
-#  Security Configurations
+# Security Configurations
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # Allow HTTP for development
 
-#  Database Configuration
+# Database Configuration
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "postgresql://ivycourt_user:2YZ3PBfebFQkHfUts4O7s6FPMZsU93Vy@dpg-cv3uej3qf0us73b34a90-a.oregon-postgres.render.com/ivycourt")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-#  JWT Configuration
+# JWT Configuration
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "supersecretkey")
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 900  # 15 minutes
 jwt = JWTManager(app)
-
 
 # Configure Cloudinary
 cloudinary.config(
@@ -56,11 +55,11 @@ cloudinary.config(
     secure=True
 )
 
-#  Initialize Database
+# Initialize Database
 db.init_app(app)
 migrate = Migrate(app, db)
 
-#  Initialize Flask-Mail (For Password Resets)
+# Initialize Flask-Mail (For Password Resets)
 app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER", "smtp.gmail.com")
 app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT", 587))
 app.config["MAIL_USE_TLS"] = True
@@ -70,22 +69,22 @@ app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER", "noreply@yo
 
 mail = Mail(app)
 
-#  Initialize Rate Limiter (Prevents brute force attacks)
+# Initialize Rate Limiter (Prevents brute force attacks)
 limiter = Limiter(
-    get_remote_address, 
-    app=app, 
-    default_limits=["1000 per hour", "100 per minute"]  
+    get_remote_address,
+    app=app,
+    default_limits=["1000 per hour", "100 per minute"]
 )
 
-#  Configure Logging
+# Configure Logging
 logging.basicConfig(level=logging.INFO)
 
-#  Function to generate a strong random password
+# Function to generate a strong random password
 def generate_random_password(length=12):
     characters = string.ascii_letters + string.digits + "!@#$%^&*()"
     return ''.join(random.choice(characters) for _ in range(length))
 
-#  Ensure `client_secret.json` Exists and is Valid
+# Ensure `client_secret.json` Exists and is Valid
 client_secrets_file = os.path.join(pathlib.Path(__file__).parent, "client_secret.json")
 
 if not os.path.exists(client_secrets_file):
@@ -97,9 +96,8 @@ try:
 except json.JSONDecodeError:
     raise ValueError("❌ Error: client_secret.json is not a valid JSON file!")
 
-
-#  Google Login Authorization Route
-@app.route("/authorize_google")
+# Google Login Authorization Route
+@app.route("/authorize_google", methods=["GET"])
 def authorize_google():
     """Initiates Google OAuth login."""
     flow = Flow.from_client_secrets_file(
@@ -116,7 +114,7 @@ def authorize_google():
     session["state"] = state
     return redirect(authorization_url)
 
-@app.route("/google_login/callback")
+@app.route("/google_login/callback", methods=["GET"])
 def google_callback():
     """Handles Google OAuth login and user creation."""
     flow = Flow.from_client_secrets_file(
@@ -141,8 +139,8 @@ def google_callback():
         hashed_password = generate_password_hash(generate_random_password())
 
         user = User(
-            name=user_info["name"], 
-            email=user_info["email"], 
+            name=user_info["name"],
+            email=user_info["email"],
             password=hashed_password
         )
         db.session.add(user)
@@ -176,10 +174,9 @@ def get_user_info(credentials):
         "email": user_info["email"],
         "name": user_info["name"],
         "picture": user_info["picture"]
-      
     }
 
-# ! Upload images to clouds
+# Upload images to Cloudinary
 @app.route("/upload-image", methods=["POST"])
 def upload_image():
     try:
@@ -206,16 +203,16 @@ def upload_image():
     except Exception as e:
         print(f"❌ Error Uploading Image: {e}")
         return jsonify({"error": str(e)}), 500
-    
-#  Mpesa Payment Callback Route (Debugging)
+
+# Mpesa Payment Callback Route (Debugging)
 @app.route("/callback", methods=["POST"])
 def mpesa_callback():
-  """Handles Mpesa payment callbacks."""
-  data = request.get_json()
-  logging.info(f"📩 Received Mpesa Callback: {data}")
-  return jsonify({"message": "Callback received"}), 200
+    """Handles Mpesa payment callbacks."""
+    data = request.get_json()
+    logging.info(f"📩 Received Mpesa Callback: {data}")
+    return jsonify({"message": "Callback received"}), 200
 
-#  Register Blueprints
+# Register Blueprints
 from views.user_routes import user_bp
 from views.space_routes import space_bp
 from views.bookings import booking_bp
@@ -230,10 +227,10 @@ app.register_blueprint(payment_bp)
 app.register_blueprint(agreement_bp)
 app.register_blueprint(auth_bp)
 
-#  Create Database Tables
+# Create Database Tables
 with app.app_context():
     db.create_all()
 
-#  Run Flask App
+# Run Flask App
 if __name__ == "__main__":
     app.run(debug=True)
