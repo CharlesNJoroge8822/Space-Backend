@@ -12,7 +12,6 @@ flask-migrate = "*"
 python-dotenv = "*"
 cloudinary = "*"
 flask-dance = "*"
-flask-jwt-extended = "*"
 gunicorn = "*"
 requests = "*"
 flask-mail = "*"
@@ -20,6 +19,7 @@ redis = "*"
 flask-login = "*"
 flask-limiter = "*"
 psycopg2-binary = "*"
+flask-jwt-extended = "*"
 
 [dev-packages]
 
