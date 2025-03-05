@@ -29,7 +29,7 @@ app = Flask(__name__)
 CORS(
     app, 
     supports_credentials=True, 
-    origins=["https://spacefrontend.vercel.app/"], 
+    origins=["https://spacefrontend.vercel.app"], 
     methods=["GET", "POST", "DELETE", "PATCH"],
     allow_headers=["Content-Type", "Authorization"]
 )
