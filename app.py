@@ -29,10 +29,11 @@ app = Flask(__name__)
 CORS(
     app, 
     supports_credentials=True, 
-    origins=["http://localhost:5173"], 
+    origins=["https://spacefrontend.vercel.app/"], 
     methods=["GET", "POST", "DELETE", "PATCH"],
     allow_headers=["Content-Type", "Authorization"]
 )
+
 #  Security Configurations
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # Allow HTTP for development
@@ -108,7 +109,7 @@ def authorize_google():
             "https://www.googleapis.com/auth/userinfo.email",
             "openid"
         ],
-        redirect_uri="http://127.0.0.1:5000/google_login/callback"
+        redirect_uri="https://space-backend-6.onrender.com/google_login/callback"
     )
     
     authorization_url, state = flow.authorization_url()
@@ -125,7 +126,7 @@ def google_callback():
             "https://www.googleapis.com/auth/userinfo.email",
             "openid"
         ],
-        redirect_uri="http://127.0.0.1:5000/google_login/callback"
+        redirect_uri="https://space-backend-6.onrender.com/google_login/callback"
     )
 
     flow.fetch_token(authorization_response=request.url)
@@ -154,7 +155,7 @@ def google_callback():
         "role": user.role
     }
 
-    return redirect(f"http://localhost:5173/login")
+    return redirect(f"https://spacefrontend.vercel.app/login")
 
 def credentials_to_dict(credentials):
     """Converts credentials to a dictionary."""
