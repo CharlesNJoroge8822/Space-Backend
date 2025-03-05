@@ -26,13 +26,13 @@ load_dotenv()
 app = Flask(__name__)
 
 # Enable CORS
+
 CORS(
     app,
-    supports_credentials=True,
-    origins=["https://spacefrontend.vercel.app"],  # Remove the trailing slash
-    methods=["GET", "POST", "DELETE", "PATCH", "OPTIONS"],  # Add OPTIONS for preflight requests
-    allow_headers=["Content-Type", "Authorization"]
+    resources={r"/*": {"origins": "https://spacefrontend.vercel.app"}},
+    supports_credentials=True
 )
+
 
 # Security Configurations
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
