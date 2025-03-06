@@ -9,8 +9,6 @@ import re
 from flask_mail import Message
 from app import mail  # ✅ Ensure Flask-Mail is initialized correctly
 from app import limiter  # ✅ Import limiter from app.py (Avoid NameError)
-import json  # ✅ Fix for 'name json is not defined'
-from flask_cors import cross_origin  # Import cross_origin decorator
 
 auth_bp = Blueprint("auth_bp", __name__)
 
@@ -41,19 +39,9 @@ def googlelogin():
     }), 200
 
 # ✅ LOGIN ROUTE
-@auth_bp.route("/login", methods=["POST", "OPTIONS"])  # Add OPTIONS method for preflight requests
-@cross_origin()  # Enable CORS for this route
+@auth_bp.route("/login", methods=["POST"])
 def login():
     """Authenticate user and return JWT token."""
-    if request.method == "OPTIONS":
-        # Handle preflight request
-        response = jsonify({"message": "Preflight request successful"})
-        response.headers.add("Access-Control-Allow-Origin", "https://codedchaos.vercel.app")
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
-        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
-        return response, 200
-
-    # Handle the actual POST request
     data = request.get_json()
     email = data.get("email")
     password = data.get("password")
@@ -65,7 +53,7 @@ def login():
     if not user or not check_password_hash(user.password, password):
         return jsonify({"error": "Invalid email or password"}), 401
 
-    access_token = create_access_token(identity=user.id, expires_delta=timedelta(hours=1))
+    access_token = create_access_token(identity=str(user.id), expires_delta=timedelta(hours=1))
 
     return jsonify({
         "access_token": access_token,
@@ -74,7 +62,7 @@ def login():
             "name": user.name,
             "email": user.email,
             "role": user.role,
-            "image": user.image,  # ✅ Ensure latest image is sent
+            "image": user.image,
             "is_admin": user.role.lower() == "admin"
         }
     }), 200
@@ -94,16 +82,19 @@ def current_user():
         "name": user.name,
         "email": user.email,
         "role": user.role,
-        "image": user.image,  # ✅ Ensure latest image is sent
+        "image": user.image,
         "is_admin": user.role.lower() == "admin"
     }), 200
 
 
 # ✅ LOGOUT ROUTE
 @auth_bp.route("/logout", methods=["DELETE"])
+@jwt_required()
 def logout():
-    """Handle logout without using JWT."""
-    # Simply return a success message since there's no JWT to manage
+    """Blacklist a token on logout."""
+    jti = get_jwt()["jti"]
+    db.session.add(TokenBlockList(jti=jti, created_at=datetime.now(timezone.utc)))
+    db.session.commit()
     return jsonify({"success": "Logged out successfully"}), 200
 
 
@@ -191,51 +182,32 @@ def request_password_reset():
 
 # ✅ RESET PASSWORD (With Token)
 @auth_bp.route("/reset_password", methods=["POST"])
-@limiter.limit("3 per minute")  # Prevent brute force attacks
+@limiter.limit("3 per minute")  # ✅ Prevent brute force attacks
 def reset_password():
     """Reset the user's password using the short reset token."""
     
-    try:
-        # ✅ Log incoming data
-        data = request.get_json(force=True)
-        print("📥 Received Data:", json.dumps(data, indent=2))
+    data = request.get_json()
+    reset_token = data.get("reset_token")
+    new_password = data.get("new_password")
 
-        # ✅ Validate JSON data
-        if data is None:
-            return jsonify({"error": "Invalid JSON format or empty request body"}), 400
+    if not reset_token or not new_password:
+        return jsonify({"error": "Reset token and new password are required"}), 400
 
-        reset_token = data.get("reset_token")
-        new_password = data.get("new_password")
+    user = User.query.filter_by(reset_token=reset_token).first()
+    if not user:
+        return jsonify({"error": "Invalid or expired reset token"}), 401
 
-        print("🔍 Extracted:", {"reset_token": reset_token, "new_password": new_password})
+    # ✅ Validate password strength
+    if not re.match(r"^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$", new_password):
+        return jsonify({"error": "Password must be at least 6 characters long, "
+                                 "contain one uppercase letter, one number, and one special character (@$!%*?&)."}), 400
 
-        if not reset_token or not new_password:
-            print("⛔ Missing reset token or password!")
-            return jsonify({"error": "Reset token and new password are required"}), 400
+    # ✅ Hash the new password
+    user.password = generate_password_hash(new_password, method="pbkdf2:sha256")
+    
+    # ✅ Clear the reset token after successful reset
+    user.reset_token = None
 
-        # ✅ Check if the user exists
-        user = User.query.filter_by(reset_token=reset_token).first()
-        print("👤 Found user:", user)
+    db.session.commit()
 
-        if not user:
-            return jsonify({"error": "Invalid or expired reset token"}), 401
-
-        # ✅ Validate password strength
-        if not re.match(r"^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$", new_password):
-            return jsonify({"error": "Password must be at least 6 characters long, "
-                                     "contain one uppercase letter, one number, and one special character (@$!%*?&)."}), 400
-
-        # ✅ Hash the new password
-        user.password = generate_password_hash(new_password, method="pbkdf2:sha256")
-        
-        # ✅ Clear the reset token after successful reset
-        user.reset_token = None
-
-        db.session.commit()
-
-        print("✅ Password reset successful!")  # ✅ Debug success message
-        return jsonify({"msg": "Password reset successfully. You can now log in with your new password."}), 200
-
-    except Exception as e:
-        print("🚨 Unexpected Error:", str(e))  # ✅ Catch and log unexpected errors
-        return jsonify({"error": "Internal Server Error"}), 500
+    return jsonify({"msg": "Password reset successfully. You can now log in with your new password."}), 200

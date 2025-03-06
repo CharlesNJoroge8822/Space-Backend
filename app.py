@@ -4,6 +4,8 @@ import pathlib
 import random
 import string
 import logging
+import cloudinary
+import cloudinary.uploader
 from flask import Flask, redirect, url_for, jsonify, request, session
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash
@@ -15,65 +17,39 @@ from flask_limiter.util import get_remote_address
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
-from models import db, User, Space, Booking, Payment, Agreement, TokenBlockList
+from models import db, User, Space, Booking, Payment, Agreement, TokenBlockList  
 from redis import Redis
-import cloudinary
+from utils.cloudinary_images import upload_image
 
-# Load environment variables
+
+
+# ✅ Load environment variables
 load_dotenv()
 
-# Initialize Flask App
+# ✅ Initialize Flask App
 app = Flask(__name__)
 
-# Enable CORS
+# ✅ Enable CORS
+CORS(app)
 
-from flask_cors import CORS
-
-#! Enable CORS for all routes
-CORS(
-    app,
-    resources={r"/*": {"origins": "https://comdebookthisspace.vercel.app"}},  # Restrict to your frontend
-    supports_credentials=True,
-    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"]
-)
-
-# !handle preflights ..
-@app.after_request
-def after_request(response):
-    """Add CORS headers to every response."""
-    response.headers.add("Access-Control-Allow-Origin", "*")  # Allow all origins (or specify your frontend domain)
-    response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
-    response.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-    response.headers.add("Access-Control-Allow-Credentials", "true")
-    return response
-
-# Security Configurations
+# ✅ Security Configurations
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # Allow HTTP for development
 
-# Database Configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "postgresql://ivycourt_user:2YZ3PBfebFQkHfUts4O7s6FPMZsU93Vy@dpg-cv3uej3qf0us73b34a90-a.oregon-postgres.render.com/ivycourt")
+# ✅ Database Configuration
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///rental.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# JWT Configuration
+# ✅ JWT Configuration
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "supersecretkey")
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 900  # 15 minutes
 jwt = JWTManager(app)
 
-# Configure Cloudinary
-cloudinary.config(
-    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.getenv("CLOUDINARY_API_KEY"),
-    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
-    secure=True
-)
-
-# Initialize Database
+# ✅ Initialize Database
 db.init_app(app)
 migrate = Migrate(app, db)
 
-# Initialize Flask-Mail (For Password Resets)
+# ✅ Initialize Flask-Mail (For Password Resets)
 app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER", "smtp.gmail.com")
 app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT", 587))
 app.config["MAIL_USE_TLS"] = True
@@ -83,22 +59,22 @@ app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER", "noreply@yo
 
 mail = Mail(app)
 
-# Initialize Rate Limiter (Prevents brute force attacks)
+# ✅ Initialize Rate Limiter (Prevents brute force attacks)
 limiter = Limiter(
-    get_remote_address,
-    app=app,
-    default_limits=["1000 per hour", "100 per minute"]
+    get_remote_address, 
+    app=app, 
+    default_limits=["100 per hour", "10 per minute"]
 )
 
-# Configure Logging
+# ✅ Configure Logging
 logging.basicConfig(level=logging.INFO)
 
-# Function to generate a strong random password
+# ✅ Function to generate a strong random password
 def generate_random_password(length=12):
     characters = string.ascii_letters + string.digits + "!@#$%^&*()"
     return ''.join(random.choice(characters) for _ in range(length))
 
-# Ensure `client_secret.json` Exists and is Valid
+# ✅ Ensure `client_secret.json` Exists and is Valid
 client_secrets_file = os.path.join(pathlib.Path(__file__).parent, "client_secret.json")
 
 if not os.path.exists(client_secrets_file):
@@ -110,8 +86,47 @@ try:
 except json.JSONDecodeError:
     raise ValueError("❌ Error: client_secret.json is not a valid JSON file!")
 
-# Google Login Authorization Route
-@app.route("/authorize_google", methods=["GET"])
+@app.route("/upload-image", methods=["POST"])
+@jwt_required()
+def upload_image():
+    try:
+        print("🟢 Received image upload request")
+        print(f"🟢 Request Headers: {request.headers}")  # Debugging
+        print(f"🟢 Request Files: {request.files}")  # Debugging
+        
+        if "file" not in request.files:
+            print("⛔ No file provided in request")
+            return jsonify({"error": "No file provided"}), 400
+
+        file = request.files["file"]
+        print(f"📂 File Received: {file.filename}")
+
+        # Upload to Cloudinary
+        upload_result = cloudinary.uploader.upload(file, folder="profile_pictures")
+        image_url = upload_result["secure_url"]
+        print(f"✅ Cloudinary Upload Success: {image_url}")
+
+        # Get the current user ID from JWT
+        current_user_id = get_jwt_identity()
+        print(f"🔍 Current User ID: {current_user_id}")
+
+        user = User.query.get(current_user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        user.image = image_url
+        db.session.commit()
+        print(f"✅ User {user.id} profile image updated in DB")
+
+        return jsonify({"image_url": image_url, "message": "Image uploaded and saved successfully!"}), 200
+    except Exception as e:
+        print(f"❌ Error Uploading Image: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+
+# ✅ Google Login Authorization Route
+@app.route("/authorize_google")
 def authorize_google():
     """Initiates Google OAuth login."""
     flow = Flow.from_client_secrets_file(
@@ -121,14 +136,14 @@ def authorize_google():
             "https://www.googleapis.com/auth/userinfo.email",
             "openid"
         ],
-        redirect_uri="https://space-backend-8.onrender.com/google_login/callback"
+        redirect_uri="http://127.0.0.1:5000/google_login/callback"
     )
-
+    
     authorization_url, state = flow.authorization_url()
     session["state"] = state
     return redirect(authorization_url)
 
-@app.route("/google_login/callback", methods=["GET"])
+@app.route("/google_login/callback")
 def google_callback():
     """Handles Google OAuth login and user creation."""
     flow = Flow.from_client_secrets_file(
@@ -138,7 +153,7 @@ def google_callback():
             "https://www.googleapis.com/auth/userinfo.email",
             "openid"
         ],
-        redirect_uri="https://space-backend-9.onrender.com/google_login/callback"
+        redirect_uri="http://127.0.0.1:5000/google_login/callback"
     )
 
     flow.fetch_token(authorization_response=request.url)
@@ -153,8 +168,8 @@ def google_callback():
         hashed_password = generate_password_hash(generate_random_password())
 
         user = User(
-            name=user_info["name"],
-            email=user_info["email"],
+            name=user_info["name"], 
+            email=user_info["email"], 
             password=hashed_password
         )
         db.session.add(user)
@@ -167,7 +182,7 @@ def google_callback():
         "role": user.role
     }
 
-    return redirect(f"https://codedchaos.vercel.app/login")
+    return redirect(f"http://localhost:5173/login")
 
 def credentials_to_dict(credentials):
     """Converts credentials to a dictionary."""
@@ -188,45 +203,22 @@ def get_user_info(credentials):
         "email": user_info["email"],
         "name": user_info["name"],
         "picture": user_info["picture"]
+      
     }
 
-# Upload images to Cloudinary
-@app.route("/upload-image", methods=["POST"])
-def upload_image():
-    try:
-        print("🟢 Received image upload request")
-        print(f"🟢 Request Headers: {request.headers}")  # Debugging
-        print(f"🟢 Request Files: {request.files}")  # Debugging
-        
-        # Check if a file is provided in the request
-        if "file" not in request.files:
-            print("⛔ No file provided in request")
-            return jsonify({"error": "No file provided"}), 400
+#  End of google auth
 
-        # Get the file from the request
-        file = request.files["file"]
-        print(f"📂 File Received: {file.filename}")
-
-        # Upload the file to Cloudinary
-        upload_result = cloudinary.uploader.upload(file, folder="profile_pictures")
-        image_url = upload_result["secure_url"]
-        print(f"✅ Cloudinary Upload Success: {image_url}")
-
-        # Return the uploaded image URL
-        return jsonify({"image_url": image_url, "message": "Image uploaded successfully!"}), 200
-    except Exception as e:
-        print(f"❌ Error Uploading Image: {e}")
-        return jsonify({"error": str(e)}), 500
-
-# Mpesa Payment Callback Route (Debugging)
+# ✅ Mpesa Payment Callback Route (Debugging)
 @app.route("/callback", methods=["POST"])
 def mpesa_callback():
-    """Handles Mpesa payment callbacks."""
-    data = request.get_json()
-    logging.info(f"📩 Received Mpesa Callback: {data}")
-    return jsonify({"message": "Callback received"}), 200
+  """Handles Mpesa payment callbacks."""
+  data = request.get_json()
+  logging.info(f"📩 Received Mpesa Callback: {data}")
+  return jsonify({"message": "Callback received"}), 200
 
-# Register Blueprints
+
+
+# ✅ Register Blueprints
 from views.user_routes import user_bp
 from views.space_routes import space_bp
 from views.bookings import booking_bp
@@ -241,10 +233,10 @@ app.register_blueprint(payment_bp)
 app.register_blueprint(agreement_bp)
 app.register_blueprint(auth_bp)
 
-# Create Database Tables
+# ✅ Create Database Tables
 with app.app_context():
     db.create_all()
 
-# Run Flask App
+# ✅ Run Flask App
 if __name__ == "__main__":
     app.run(debug=True)
