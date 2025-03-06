@@ -10,41 +10,74 @@ booking_bp = Blueprint("booking_bp", __name__)
 logging.basicConfig(level=logging.INFO)
 
 #! CREATE BOOKING (Starts as "Pending Payment")
+# @booking_bp.route("/bookings", methods=['POST'])
+# def create_booking():
+#     try:
+#         data = request.get_json()
+
+#         required_fields = ["user_id", "space_id", "start_time", "end_time", "total_amount"]
+#         if not all(field in data for field in required_fields):
+#             return jsonify({"error": "Missing required fields"}), 400
+
+#         start_time = datetime.strptime(data["start_time"], "%Y-%m-%dT%H:%M:%S")
+#         end_time = datetime.strptime(data["end_time"], "%Y-%m-%dT%H:%M:%S")
+
+#         # Check if space is available
+#         space = Space.query.get(data["space_id"])
+#         if not space or not space.availability:
+#             return jsonify({"error": "Space is not available"}), 409
+
+#         new_booking = Booking(
+#             user_id=data["user_id"],
+#             space_id=data["space_id"],
+#             start_time=start_time,
+#             end_time=end_time,
+#             total_amount=data["total_amount"],
+#             status="Pending Payment"
+#         )
+
+#         db.session.add(new_booking)
+#         db.session.commit()
+
+#         return jsonify({"message": "Booking created successfully", "id": new_booking.id}), 201
+
+#     except Exception as e:
+#         db.session.rollback()
+#         logging.error(f"🚨 Error creating booking: {e}")
+#         return jsonify({"error": "An error occurred while processing the booking"}), 500
+
+#! ✅ CREATE BOOKING FIRST, THEN INITIATE PAYMENT
 @booking_bp.route("/bookings", methods=['POST'])
 def create_booking():
-    try:
-        data = request.get_json()
+    data = request.get_json()
+    required_fields = ["user_id", "space_id", "start_time", "end_time", "total_amount"]
+    
+    if not all(field in data for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
 
-        required_fields = ["user_id", "space_id", "start_time", "end_time", "total_amount"]
-        if not all(field in data for field in required_fields):
-            return jsonify({"error": "Missing required fields"}), 400
+    # ✅ Ensure space is still available
+    space = Space.query.get(data["space_id"])
+    if not space:
+        return jsonify({"error": "Space not found"}), 404
 
-        start_time = datetime.strptime(data["start_time"], "%Y-%m-%dT%H:%M:%S")
-        end_time = datetime.strptime(data["end_time"], "%Y-%m-%dT%H:%M:%S")
+    if space.availability is False:
+        return jsonify({"error": "Space is already booked"}), 400
 
-        # Check if space is available
-        space = Space.query.get(data["space_id"])
-        if not space or not space.availability:
-            return jsonify({"error": "Space is not available"}), 409
+    # ✅ Create a new booking
+    new_booking = Booking(
+        user_id=data["user_id"],
+        space_id=data["space_id"],
+        start_time=data["start_time"],
+        end_time=data["end_time"],
+        total_amount=data["total_amount"],
+        status="Pending Payment"  # ✅ Only becomes "Booked" after payment
+    )
 
-        new_booking = Booking(
-            user_id=data["user_id"],
-            space_id=data["space_id"],
-            start_time=start_time,
-            end_time=end_time,
-            total_amount=data["total_amount"],
-            status="Pending Payment"
-        )
+    db.session.add(new_booking)
+    db.session.commit()
 
-        db.session.add(new_booking)
-        db.session.commit()
+    return jsonify({"message": "Booking created successfully. Proceed to payment.", "booking_id": new_booking.id}), 201
 
-        return jsonify({"message": "Booking created successfully", "id": new_booking.id}), 201
-
-    except Exception as e:
-        db.session.rollback()
-        logging.error(f"🚨 Error creating booking: {e}")
-        return jsonify({"error": "An error occurred while processing the booking"}), 500
 
 #! ✅ FETCH ALL BOOKINGS
 @booking_bp.route("/bookings", methods=['GET'])
