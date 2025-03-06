@@ -32,11 +32,13 @@ from flask_cors import CORS
 #! Enable CORS for all routes
 CORS(
     app,
-    resources={r"/*": {"origins": "https://booknowman.vercel.app"}},  # Restrict to your frontend
+    resources={r"/*": {"origins": "https://ivycourt.vercel.app"}},
     supports_credentials=True,
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"]
+    allow_headers=["Content-Type", "Authorization"],
+    max_age=3600  # Optional: Cache preflight for 1 hour
 )
+
 
 # !handle preflights ..
 @app.after_request
@@ -167,7 +169,7 @@ def google_callback():
         "role": user.role
     }
 
-    return redirect(f"https://booknowman.vercel.app/login")
+    return redirect(f"https://ivycourt.vercel.app/login")
 
 def credentials_to_dict(credentials):
     """Converts credentials to a dictionary."""
