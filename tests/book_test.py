@@ -84,7 +84,7 @@ def test_update_booking_status_not_found(client):
     assert response.status_code == 404
     assert "Booking not found" in response.get_json()["error"]
 
-# ✅ TEST DELETE BOOKING
+# ✅ TEST DELETE BOOKING when rencljsakncsjab ajsm
 def test_delete_booking(client):
     booking_id = setup_test_booking()
     response = client.delete(f"/bookings/{booking_id}")

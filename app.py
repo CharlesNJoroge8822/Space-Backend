@@ -69,6 +69,7 @@ app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER", "noreply@yo
 
 mail = Mail(app)
 
+
 #  Initialize Rate Limiter (Prevents brute force attacks)
 limiter = Limiter(
     get_remote_address, 

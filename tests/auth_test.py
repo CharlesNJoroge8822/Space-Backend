@@ -122,9 +122,10 @@ def test_reset_password_invalid_token(client):
     response = client.post("/reset_password", json={
         "reset_token": "INVALIDTOKEN",
         "new_password": "NewPass@123"
-    })
+    }) 
+    
     assert response.status_code == 401
     assert "Invalid or expired reset token" in response.get_json()["error"]
 
-if __name__ == "__main__":
+if __name__ == "__main__": 
     pytest.main()
