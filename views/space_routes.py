@@ -1,36 +1,29 @@
 from flask import Blueprint, request, jsonify
 from models import Space, db, Booking
+import logging
 
 space_bp = Blueprint("space_bp", __name__)
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 #! ✅ CREATE SPACE (Default Availability: True)
 @space_bp.route("/spaces", methods=['POST'])
 def create_space():
     data = request.get_json()
 
-    name = data.get("name")
-    description = data.get("description")
-    location = data.get("location")
-    price_per_hour = data.get("price_per_hour")
-    price_per_day = data.get("price_per_day")
-    availability = data.get("availability", True)  # ✅ Default to True (Available)
-    images = data.get("images")
-
-    if not all([name, description, location, price_per_hour, price_per_day]):
+    required_fields = ["name", "description", "location", "price_per_hour", "price_per_day"]
+    if not all(field in data for field in required_fields):
         return jsonify({"error": "Missing required fields"}), 400
 
-    existing_space = Space.query.filter_by(name=name).first()
-    if existing_space:
-        return jsonify({"error": "Space with this name already exists"}), 400
-
     new_space = Space(
-        name=name,
-        description=description,
-        location=location,
-        price_per_hour=price_per_hour,
-        price_per_day=price_per_day,
-        availability=availability,
-        images=images
+        name=data["name"],
+        description=data["description"],
+        location=data["location"],
+        price_per_hour=data["price_per_hour"],
+        price_per_day=data["price_per_day"],
+        availability=True,  # Default to Available
+        images=data.get("images")
     )
 
     db.session.add(new_space)
@@ -39,11 +32,33 @@ def create_space():
     return jsonify(new_space.to_dict()), 201
 
 #! ✅ FETCH ALL SPACES
-@space_bp.route("/spaces", methods=['GET'])
+@space_bp.route("/spaces", methods=["GET"])
 def get_all_spaces():
-    spaces = Space.query.all()
-    return jsonify([space.to_dict() for space in spaces]), 200
+    try:
+        spaces = Space.query.all()
+        if not spaces:
+            logger.warning("⚠️ No spaces found in the database.")
+            return jsonify({"message": "No spaces available."}), 200
 
+        spaces_list = [
+            {
+                "id": space.id,
+                "name": space.name,
+                "description": space.description,
+                "location": space.location,
+                "price_per_hour": space.price_per_hour,
+                "price_per_day": space.price_per_day,
+                "availability": space.availability,
+                "images": space.images,
+            }
+            for space in spaces
+        ]
+        return jsonify({"spaces": spaces_list}), 200
+
+    except Exception as e:
+        logger.error(f"🚨 Error fetching spaces: {e}", exc_info=True)
+        return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
+    
 #! ✅ FETCH SINGLE SPACE (With Booking Details)
 @space_bp.route("/spaces/<int:space_id>", methods=['GET'])
 def get_space(space_id):
@@ -95,7 +110,7 @@ def update_space_availability(space_id):
         "message": f"Space status updated to {'Available' if space.availability else 'Booked'}"
     }), 200
 
-#! ✅ DELETE SPACE (Only If No Active Bookings Exist)
+#! ✅ DELETE SPACE (Ensure No Active Bookings Exist)
 @space_bp.route("/spaces/<int:space_id>", methods=['DELETE'])
 def delete_space(space_id):
     space = Space.query.get(space_id)
@@ -113,4 +128,4 @@ def delete_space(space_id):
     db.session.delete(space)
     db.session.commit()
 
-    return jsonify({"message": "Space deleted successfully"}),200
+    return jsonify({"message": "Space deleted successfully"}), 200

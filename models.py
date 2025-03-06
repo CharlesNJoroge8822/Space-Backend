@@ -57,15 +57,19 @@ class Booking(db.Model):
 
     payment = db.relationship('Payment', backref='booking', uselist=False)
 
-    @staticmethod
-    def is_space_available(space_id, start_time, end_time):
-        existing_booking = Booking.query.filter(
-            Booking.space_id == space_id,
-            Booking.status == "Confirmed",  # Only check confirmed bookings
-            Booking.end_time > start_time  
-        ).first()
-        return existing_booking is None
-
+    def to_dict(self):
+        """Converts the Booking object into a dictionary."""
+        return {
+            "id": self.id,
+            "start_time": self.start_time.isoformat() if self.start_time else None,
+            "end_time": self.end_time.isoformat() if self.end_time else None,
+            "total_amount": self.total_amount,
+            "status": self.status,
+            "user_id": self.user_id,
+            "space_id": self.space_id,
+            "payment": self.payment.to_dict() if self.payment else None  # Assuming Payment has a to_dict method
+        }
+    
 class Agreement(db.Model):
     __tablename__ = 'agreements'
 
