@@ -27,11 +27,26 @@ app = Flask(__name__)
 
 # Enable CORS
 
+from flask_cors import CORS
+
+#! Enable CORS for all routes
 CORS(
     app,
-    resources={r"/*": {"origins": "*"}},  # Temporary for debugging
-    supports_credentials=True
+    resources={r"/*": {"origins": "*"}},  # Allow all origins (or specify your frontend domain)
+    supports_credentials=True,
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],  # Allow all methods
+    allow_headers=["Content-Type", "Authorization"]  # Allow necessary headers
 )
+
+# !handle preflights ..
+@app.after_request
+def after_request(response):
+    """Add CORS headers to every response."""
+    response.headers.add("Access-Control-Allow-Origin", "*")  # Allow all origins (or specify your frontend domain)
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+    response.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
+    return response
 
 # Security Configurations
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
