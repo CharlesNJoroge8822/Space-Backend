@@ -48,7 +48,7 @@ def login():
     if request.method == "OPTIONS":
         # Handle preflight request
         response = jsonify({"message": "Preflight request successful"})
-        response.headers.add("Access-Control-Allow-Origin", "https://comdebookthisspace.vercel.app")
+        response.headers.add("Access-Control-Allow-Origin", "https://codedchaos.vercel.app")
         response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
         response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
         return response, 200
