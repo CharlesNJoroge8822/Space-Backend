@@ -10,7 +10,7 @@ from flask_mail import Message
 from app import mail  # ✅ Ensure Flask-Mail is initialized correctly
 from app import limiter  # ✅ Import limiter from app.py (Avoid NameError)
 import json  # ✅ Fix for 'name json is not defined'
-
+from flask_cors import cross_origin  # Import cross_origin decorator
 
 auth_bp = Blueprint("auth_bp", __name__)
 
@@ -41,9 +41,19 @@ def googlelogin():
     }), 200
 
 # ✅ LOGIN ROUTE
-@auth_bp.route("/login", methods=["POST"])
+@auth_bp.route("/login", methods=["POST", "OPTIONS"])  # Add OPTIONS method for preflight requests
+@cross_origin()  # Enable CORS for this route
 def login():
     """Authenticate user and return JWT token."""
+    if request.method == "OPTIONS":
+        # Handle preflight request
+        response = jsonify({"message": "Preflight request successful"})
+        response.headers.add("Access-Control-Allow-Origin", "https://comdebookthisspace.vercel.app")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        return response, 200
+
+    # Handle the actual POST request
     data = request.get_json()
     email = data.get("email")
     password = data.get("password")
