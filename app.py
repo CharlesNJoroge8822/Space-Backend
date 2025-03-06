@@ -32,12 +32,13 @@ from flask_cors import CORS
 #! Enable CORS for all routes
 CORS(
     app,
-    resources={r"/*": {"origins": "https://bookingaspace.vercel.app"}},  # 🔄 Update the correct frontend URL
+    resources={r"/*": {"origins": ["https://bookingaspace.vercel.app", "https://67c93cb410fb8e0008cf75b7--bookspacenow.netlify.app"]}},  
     supports_credentials=True,
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
     max_age=3600
 )
+
 
 # Security Configurations
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
