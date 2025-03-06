@@ -138,7 +138,7 @@ def google_callback():
             "https://www.googleapis.com/auth/userinfo.email",
             "openid"
         ],
-        redirect_uri="https://space-backend-8.onrender.com/google_login/callback"
+        redirect_uri="https://space-backend-9.onrender.com/google_login/callback"
     )
 
     flow.fetch_token(authorization_response=request.url)
@@ -167,7 +167,7 @@ def google_callback():
         "role": user.role
     }
 
-    return redirect(f"https://comdebookthisspace.vercel.app/login")
+    return redirect(f"https://codedchaos.vercel.app/login")
 
 def credentials_to_dict(credentials):
     """Converts credentials to a dictionary."""
