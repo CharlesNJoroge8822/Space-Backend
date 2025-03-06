@@ -106,7 +106,7 @@ def authorize_google():
             "https://www.googleapis.com/auth/userinfo.email",
             "openid"
         ],
-        redirect_uri="https://space-backend-6.onrender.com/google_login/callback"
+        redirect_uri="https://space-backend-8.onrender.com/google_login/callback"
     )
 
     authorization_url, state = flow.authorization_url()
@@ -123,7 +123,7 @@ def google_callback():
             "https://www.googleapis.com/auth/userinfo.email",
             "openid"
         ],
-        redirect_uri="https://space-backend-6.onrender.com/google_login/callback"
+        redirect_uri="https://space-backend-8.onrender.com/google_login/callback"
     )
 
     flow.fetch_token(authorization_response=request.url)
@@ -152,7 +152,7 @@ def google_callback():
         "role": user.role
     }
 
-    return redirect(f"https://spacefrontend.vercel.app/login")
+    return redirect(f"https://comdebookthisspace.vercel.app/login")
 
 def credentials_to_dict(credentials):
     """Converts credentials to a dictionary."""
