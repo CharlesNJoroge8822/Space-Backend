@@ -32,7 +32,7 @@ from flask_cors import CORS
 #! Enable CORS for all routes
 CORS(
     app,
-    resources={r"/*": {"origins": "https://ivycourt.vercel.app"}},
+    resources={r"/*": {"origins": "https://spacerentals.vercel.app/"}},
     supports_credentials=True,
     methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
@@ -123,7 +123,7 @@ def authorize_google():
             "https://www.googleapis.com/auth/userinfo.email",
             "openid"
         ],
-        redirect_uri="https://space-backend-9.onrender.com/google_login/callback"
+        redirect_uri="https://space-backend-2-p4kd.onrender.com/google_login/callback"
     )
 
     authorization_url, state = flow.authorization_url()
@@ -140,7 +140,7 @@ def google_callback():
             "https://www.googleapis.com/auth/userinfo.email",
             "openid"
         ],
-        redirect_uri="https://space-backend-9.onrender.com/google_login/callback"
+        redirect_uri="https://space-backend-2-p4kd.onrender.com/google_login/callback"
     )
 
     flow.fetch_token(authorization_response=request.url)
@@ -169,7 +169,7 @@ def google_callback():
         "role": user.role
     }
 
-    return redirect(f"https://ivycourt.vercel.app/login")
+    return redirect(f"https://spacerentals.vercel.app/login")
 
 def credentials_to_dict(credentials):
     """Converts credentials to a dictionary."""
