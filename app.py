@@ -32,10 +32,10 @@ from flask_cors import CORS
 #! Enable CORS for all routes
 CORS(
     app,
-    resources={r"/*": {"origins": "*"}},  # Allow all origins (or specify your frontend domain)
+    resources={r"/*": {"origins": "https://comdebookthisspace.vercel.app"}},  # Restrict to your frontend
     supports_credentials=True,
-    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],  # Allow all methods
-    allow_headers=["Content-Type", "Authorization"]  # Allow necessary headers
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"]
 )
 
 # !handle preflights ..
