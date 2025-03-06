@@ -2,6 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import random
 import string
+from sqlalchemy import event
 
 db = SQLAlchemy()  #! Initialize DB
 
@@ -22,13 +23,25 @@ class User(db.Model):
         self.reset_token = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
         db.session.commit()
 
+    def to_dict(self):
+        """Convert user object to dictionary."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email,
+            "role": self.role,
+            "created_at": self.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            "image": self.image,
+            "reset_token": self.reset_token,
+        }
 
     bookings = db.relationship('Booking', backref='user', lazy=True)
     payments = db.relationship('Payment', backref='user', lazy=True)
     agreements = db.relationship('Agreement', backref='user', lazy=True)
 
+
 class Space(db.Model):
-    __tablename__ = 'spaces'  
+    __tablename__ = 'spaces'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
@@ -36,11 +49,25 @@ class Space(db.Model):
     location = db.Column(db.String(200), nullable=False, index=True)
     price_per_hour = db.Column(db.Float, nullable=False)
     price_per_day = db.Column(db.Float, nullable=False)
-    availability = db.Column(db.String(500), nullable=False)  #! JSON String of availability slots
-    images = db.Column(db.String(500), nullable=True)  #! Comma-separated image URLs
+    status = db.Column(db.String(50), default="Available")  # New field: "Available" or "Booked"
+    images = db.Column(db.String(500), nullable=True)  # Comma-separated image URLs
 
-    #! Relationships
-    bookings = db.relationship('Booking', backref='space', lazy=True)  #! Multiple bookings allowed
+    # Relationships
+    bookings = db.relationship('Booking', backref='space', lazy=True)  # Multiple bookings allowed
+
+    def to_dict(self):
+        """Converts the Space object into a dictionary."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "location": self.location,
+            "price_per_hour": self.price_per_hour,
+            "price_per_day": self.price_per_day,
+            "status": self.status,
+            "images": self.images,
+            "bookings": [booking.to_dict() for booking in self.bookings] if self.bookings else []
+        }
 
 
 class Booking(db.Model):
@@ -69,6 +96,47 @@ class Booking(db.Model):
             "space_id": self.space_id,
             "payment": self.payment.to_dict() if self.payment else None  # Assuming Payment has a to_dict method
         }
+
+    def mark_space_as_booked(self):
+        """Updates the associated space's status to 'Booked'."""
+        space = Space.query.get(self.space_id)
+        if space:
+            space.status = "Booked"
+            db.session.commit()
+
+# Event listener to automatically mark space as booked when a booking is created
+@event.listens_for(Booking, 'after_insert')
+def after_booking_insert(mapper, connection, target):
+    """
+    Automatically marks the associated space as 'Booked' after a booking is created.
+    """
+    target.mark_space_as_booked()
+
+# Event listener to handle space status when a booking is deleted
+@event.listens_for(Booking, 'after_delete')
+def after_booking_delete(mapper, connection, target):
+    """
+    Automatically marks the associated space as 'Available' after a booking is deleted.
+    """
+    space = Space.query.get(target.space_id)
+    if space:
+        space.status = "Available"
+        db.session.commit()
+
+# Event listener to handle space status when a booking's status changes
+@event.listens_for(Booking.status, 'set')
+def after_booking_status_change(target, value, oldvalue, initiator):
+    """
+    Automatically updates the associated space's status based on the booking's status.
+    """
+    if value == "Confirmed":  # Assuming "Confirmed" means the booking is finalized
+        target.mark_space_as_booked()
+    elif value in ["Cancelled", "Pending Payment"]:  # Reset space status if booking is cancelled or payment is pending
+        space = Space.query.get(target.space_id)
+        if space:
+            space.status = "Available"
+            db.session.commit()
+    
     
 class Agreement(db.Model):
     __tablename__ = 'agreements'
@@ -114,6 +182,15 @@ class Payment(db.Model):
             "mpesa_transaction_id": self.mpesa_transaction_id,
             "phone_number": self.phone_number
         }
+
+    def confirm_payment(self):
+        """Updates the payment status to 'Completed' and marks the booking as confirmed."""
+        self.status = "Completed"
+        booking = Booking.query.get(self.booking_id)
+        if booking:
+            booking.status = "Confirmed"
+            booking.mark_space_as_booked()  #! Mark the space as booked
+        db.session.commit()
  
 
 

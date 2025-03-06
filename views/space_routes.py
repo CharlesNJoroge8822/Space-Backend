@@ -4,32 +4,42 @@ import logging
 
 space_bp = Blueprint("space_bp", __name__)
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-#! ✅ CREATE SPACE (Default Availability: True)
+#! ✅ CREATE SPACE (Default Status: "Available")
 @space_bp.route("/spaces", methods=['POST'])
 def create_space():
-    data = request.get_json()
+    try:
+        data = request.get_json()
 
-    required_fields = ["name", "description", "location", "price_per_hour", "price_per_day"]
-    if not all(field in data for field in required_fields):
-        return jsonify({"error": "Missing required fields"}), 400
+        required_fields = ["name", "description", "location", "price_per_hour", "price_per_day"]
+        if not all(field in data for field in required_fields):
+            return jsonify({"error": "Missing required fields"}), 400
 
-    new_space = Space(
-        name=data["name"],
-        description=data["description"],
-        location=data["location"],
-        price_per_hour=data["price_per_hour"],
-        price_per_day=data["price_per_day"],
-        availability=True,  # Default to Available
-        images=data.get("images")
-    )
+        new_space = Space(
+            name=data["name"],
+            description=data["description"],
+            location=data["location"],
+            price_per_hour=data["price_per_hour"],
+            price_per_day=data["price_per_day"],
+            status="Available",  # Default status
+            images=data.get("images", "")  # Default to empty string if not provided
+        )
 
-    db.session.add(new_space)
-    db.session.commit()
+        db.session.add(new_space)
+        db.session.commit()
 
-    return jsonify(new_space.to_dict()), 201
+        return jsonify({
+            "message": "Space created successfully",
+            "data": new_space.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"🚨 Error creating space: {e}")
+        return jsonify({"error": "An error occurred while creating the space"}), 500
+
 
 #! ✅ FETCH ALL SPACES
 @space_bp.route("/spaces", methods=["GET"])
@@ -38,94 +48,118 @@ def get_all_spaces():
         spaces = Space.query.all()
         if not spaces:
             logger.warning("⚠️ No spaces found in the database.")
-            return jsonify({"message": "No spaces available."}), 200
+            return jsonify({"message": "No spaces available.", "data": []}), 200
 
-        spaces_list = [
-            {
-                "id": space.id,
-                "name": space.name,
-                "description": space.description,
-                "location": space.location,
-                "price_per_hour": space.price_per_hour,
-                "price_per_day": space.price_per_day,
-                "availability": space.availability,
-                "images": space.images,
-            }
-            for space in spaces
-        ]
-        return jsonify({"spaces": spaces_list}), 200
+        spaces_list = [space.to_dict() for space in spaces]  # Use to_dict method
+        return jsonify({
+            "message": "Spaces fetched successfully",
+            "data": spaces_list
+        }), 200
 
     except Exception as e:
-        logger.error(f"🚨 Error fetching spaces: {e}", exc_info=True)
-        return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
-    
-#! ✅ FETCH SINGLE SPACE (With Booking Details)
+        logger.error(f"🚨 Error fetching spaces: {e}")
+        return jsonify({"error": "An error occurred while fetching spaces"}), 500
+
+
+#! ✅ FETCH SINGLE SPACE
 @space_bp.route("/spaces/<int:space_id>", methods=['GET'])
 def get_space(space_id):
-    space = Space.query.get(space_id)
-    if not space:
-        return jsonify({"error": "Space not found"}), 404
-    return jsonify(space.to_dict()), 200
+    try:
+        space = Space.query.get(space_id)
+        if not space:
+            return jsonify({"error": "Space not found"}), 404
+
+        return jsonify({
+            "message": "Space fetched successfully",
+            "data": space.to_dict()
+        }), 200
+
+    except Exception as e:
+        logger.error(f"🚨 Error fetching space with ID {space_id}: {e}")
+        return jsonify({"error": "An error occurred while fetching the space"}), 500
+
 
 #! ✅ UPDATE SPACE DETAILS
 @space_bp.route("/spaces/<int:space_id>", methods=['PATCH'])
 def update_space(space_id):
-    space = Space.query.get(space_id)
-    if not space:
-        return jsonify({"error": "Space not found"}), 404
-    
-    data = request.get_json()
-    for key, value in data.items():
-        if hasattr(space, key):
-            setattr(space, key, value)
-    
-    db.session.commit()
-    return jsonify({"message": "Space updated successfully"}), 200
+    try:
+        space = Space.query.get(space_id)
+        if not space:
+            return jsonify({"error": "Space not found"}), 404
 
-#! ✅ UPDATE SPACE AVAILABILITY
-@space_bp.route("/spaces/<int:space_id>/availability", methods=['PATCH'])
-def update_space_availability(space_id):
-    space = Space.query.get(space_id)
-    if not space:
-        return jsonify({"error": "Space not found"}), 404
+        data = request.get_json()
+        for key, value in data.items():
+            if hasattr(space, key):
+                setattr(space, key, value)
 
-    data = request.get_json()
-    if "availability" not in data:
-        return jsonify({"error": "Missing availability field"}), 400
+        db.session.commit()
+        return jsonify({
+            "message": "Space updated successfully",
+            "data": space.to_dict()
+        }), 200
 
-    active_bookings = Booking.query.filter(
-        Booking.space_id == space_id,
-        Booking.status.in_(["Booked", "Pending Payment"])
-    ).count()
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"🚨 Error updating space with ID {space_id}: {e}")
+        return jsonify({"error": "An error occurred while updating the space"}), 500
 
-    if data["availability"] and active_bookings > 0:
-        return jsonify({"error": "Cannot mark space as available while there are active bookings"}), 400
 
-    space.availability = data["availability"]
-    db.session.commit()
+#! ✅ UPDATE SPACE STATUS
+@space_bp.route("/spaces/<int:space_id>/status", methods=['PATCH'])
+def update_space_status(space_id):
+    try:
+        space = Space.query.get(space_id)
+        if not space:
+            return jsonify({"error": "Space not found"}), 404
 
-    return jsonify({
-        "id": space.id,
-        "availability": space.availability,
-        "message": f"Space status updated to {'Available' if space.availability else 'Booked'}"
-    }), 200
+        data = request.get_json()
+        if "status" not in data:
+            return jsonify({"error": "Missing status field"}), 400
 
-#! ✅ DELETE SPACE (Ensure No Active Bookings Exist)
+        active_bookings = Booking.query.filter(
+            Booking.space_id == space_id,
+            Booking.status.in_(["Confirmed", "Pending Payment"])
+        ).count()
+
+        if data["status"] == "Available" and active_bookings > 0:
+            return jsonify({"error": "Cannot mark space as available while there are active bookings"}), 400
+
+        space.status = data["status"]
+        db.session.commit()
+
+        return jsonify({
+            "message": "Space status updated successfully",
+            "data": space.to_dict()
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"🚨 Error updating space status with ID {space_id}: {e}")
+        return jsonify({"error": "An error occurred while updating the space status"}), 500
+
+
+#! ✅ DELETE SPACE
 @space_bp.route("/spaces/<int:space_id>", methods=['DELETE'])
 def delete_space(space_id):
-    space = Space.query.get(space_id)
-    if not space:
-        return jsonify({"error": "Space not found"}), 404
+    try:
+        space = Space.query.get(space_id)
+        if not space:
+            return jsonify({"error": "Space not found"}), 404
 
-    active_bookings = Booking.query.filter(
-        Booking.space_id == space.id,
-        Booking.status.in_(["Booked", "Pending Payment"])
-    ).count()
+        active_bookings = Booking.query.filter(
+            Booking.space_id == space.id,
+            Booking.status.in_(["Booked", "Pending Payment"])
+        ).count()
 
-    if active_bookings > 0:
-        return jsonify({"error": "Cannot delete space with active or pending bookings"}), 400
+        if active_bookings > 0:
+            return jsonify({"error": "Cannot delete space with active or pending bookings"}), 400
 
-    db.session.delete(space)
-    db.session.commit()
+        db.session.delete(space)
+        db.session.commit()
 
-    return jsonify({"message": "Space deleted successfully"}), 200
+        return jsonify({"message": "Space deleted successfully"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"🚨 Error deleting space with ID {space_id}: {e}")
+        return jsonify({"error": "An error occurred while deleting the space"}), 500

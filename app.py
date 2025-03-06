@@ -30,7 +30,7 @@ load_dotenv()
 app = Flask(__name__)
 
 # ✅ Enable CORS
-CORS(app)
+CORS(app, supports_credentials=True)
 
 # ✅ Security Configurations
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
