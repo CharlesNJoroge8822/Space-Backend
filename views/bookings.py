@@ -2,10 +2,13 @@ from flask import Blueprint, request, jsonify
 from models import Booking, db
 from datetime import datetime
 import re
-import logger
+import logging  # Replaced `logger` with Python's built-in `logging`
 from flask_cors import cross_origin
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import User, Space
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 booking_bp = Blueprint("booking_bp", __name__)
 
@@ -16,7 +19,7 @@ def is_valid_date(date_str):
         return True
     except ValueError:
         return False
-    
+
 @booking_bp.route("/bookings", methods=['POST'])
 def create_booking():
     try:
@@ -70,9 +73,10 @@ def create_booking():
 
     except Exception as e:
         db.session.rollback()
+        logging.error(f"🚨 Error creating booking: {e}")  # Replaced `logger.error` with `logging.error`
         return jsonify({"error": "An error occurred while processing the booking", "details": str(e)}), 500
 
-# get single book
+# Get single booking
 @booking_bp.route("/my-bookings", methods=['GET'])
 def fetch_my_bookings():
     try:
@@ -112,7 +116,6 @@ def fetch_my_bookings():
     except Exception as e:
         print(f"🚨 ERROR in `/my-bookings`: {e}")
         return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
-
 
 # Fetch all Bookings with Pagination
 @booking_bp.route("/bookings", methods=['GET'])
@@ -154,6 +157,7 @@ def fetch_all_bookings():
         }), 200
 
     except Exception as e:
+        logging.error(f"🚨 Error fetching all bookings: {e}")  # Replaced `logger.error` with `logging.error`
         return jsonify({"error": "Failed to fetch bookings", "details": str(e)}), 500
 
 # Update Booking Status
@@ -176,7 +180,7 @@ def update_booking_status(id):
         # Update the booking status
         booking.status = data["status"]
         db.session.commit()
-        logger.info(f"✅ Booking ID {booking.id} updated to {booking.status}")
+        logging.info(f"✅ Booking ID {booking.id} updated to {booking.status}")  # Replaced `logger.info` with `logging.info`
 
         # If booking is confirmed, update the corresponding space availability
         if booking.status == "Booked":
@@ -184,15 +188,14 @@ def update_booking_status(id):
             if space:
                 space.availability = False  # Mark space as unavailable (Booked)
                 db.session.commit()
-                logger.info(f"🚀 Space ID {space.id} marked as Booked!")
+                logging.info(f"🚀 Space ID {space.id} marked as Booked!")  # Replaced `logger.info` with `logging.info`
 
         return jsonify({"id": booking.id, "status": booking.status, "message": "Booking status updated successfully"}), 200
 
     except Exception as e:
         db.session.rollback()
-        logger.error(f"🚨 Error updating booking status: {e}")
+        logging.error(f"🚨 Error updating booking status: {e}")  # Replaced `logger.error` with `logging.error`
         return jsonify({"error": "Failed to update booking status", "details": str(e)}), 500
-
 
 # Delete Booking
 @booking_bp.route('/bookings/<int:id>', methods=['DELETE'])
@@ -224,4 +227,5 @@ def delete_booking(id):
 
     except Exception as e:
         db.session.rollback()
+        logging.error(f"🚨 Error deleting booking: {e}")  # Replaced `logger.error` with `logging.error`
         return jsonify({"error": "Failed to delete booking", "details": str(e)}), 500
