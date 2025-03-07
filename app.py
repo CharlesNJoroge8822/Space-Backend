@@ -37,7 +37,7 @@ app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # Allow HTTP for development
 
 # ✅ Database Configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///myspace.db")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "postgresql://njoroge_charles_user:XU2TSaUMuEzskLKuo84loeUkQ8GatXpL@dpg-cv5i1kfnoe9s73bhcci0-a.oregon-postgres.render.com/njoroge_charles")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # ✅ JWT Configuration
