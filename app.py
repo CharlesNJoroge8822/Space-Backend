@@ -37,7 +37,7 @@ app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # Allow HTTP for development
 
 # ✅ Database Configuration
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "postgresql://spacerentdb_user:aQVhNs8k6qiGSf3nTyo9Xs0ttMzkMea2@dpg-cv5f3tfnoe9s73ehpqcg-a.oregon-postgres.render.com/spacerentdb")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///myspace.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # ✅ JWT Configuration
@@ -136,7 +136,7 @@ def authorize_google():
             "https://www.googleapis.com/auth/userinfo.email",
             "openid"
         ],
-        redirect_uri="https://space-backend-gu2q.onrender.com/google_login/callback"
+        redirect_uri="http://127.0.0.1:5000/google_login/callback"
     )
     
     authorization_url, state = flow.authorization_url()
@@ -182,7 +182,7 @@ def google_callback():
         "role": user.role
     }
 
-    return redirect(f"https://ivycourtspaces.vercel.app/login")
+    return redirect(f"http://localhost:5173/login")
 
 def credentials_to_dict(credentials):
     """Converts credentials to a dictionary."""
