@@ -67,7 +67,7 @@ class Booking(db.Model):
             "status": self.status,
             "user_id": self.user_id,
             "space_id": self.space_id,
-            "payment": self.payment.to_dict() if self.payment else None  # Assuming Payment has a to_dict method
+            "payment": self.payment.to_dict() if self.payment else None,  # Handle missing payment
         }
     
 class Agreement(db.Model):
