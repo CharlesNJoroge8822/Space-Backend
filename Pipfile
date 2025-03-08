@@ -6,9 +6,20 @@ name = "pypi"
 [packages]
 flask = "*"
 flask-sqlalchemy = "*"
-flask-mail = "*"
 werkzeug = "*"
 flask-cors = "*"
+flask-migrate = "*"
+python-dotenv = "*"
+cloudinary = "*"
+flask-dance = "*"
+gunicorn = "*"
+requests = "*"
+flask-mail = "*"
+redis = "*"
+flask-login = "*"
+flask-limiter = "*"
+psycopg2-binary = "*"
+flask-jwt-extended = "*"
 
 [dev-packages]
 
