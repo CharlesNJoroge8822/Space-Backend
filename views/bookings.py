@@ -72,8 +72,22 @@ def fetch_all_bookings():
         # Fetch all bookings from the database
         bookings = Booking.query.all()
         
-        # Convert each booking to a dictionary using the to_dict method
-        bookings_list = [booking.to_dict() for booking in bookings]
+        # Convert each booking to a dictionary and include user and space details
+        bookings_list = []
+        for booking in bookings:
+            # Fetch the associated user and space details
+            user = User.query.get(booking.user_id)
+            space = Space.query.get(booking.space_id)
+            
+            # Convert the booking to a dictionary
+            booking_dict = booking.to_dict()
+            
+            # Add user_name and space_name to the booking dictionary
+            booking_dict['user_name'] = user.name if user else "No name available"
+            booking_dict['space_name'] = space.name if space else "No space name available"
+            
+            # Append the updated booking dictionary to the list
+            bookings_list.append(booking_dict)
         
         # Return the list of bookings as a JSON response
         return jsonify(bookings_list), 200
@@ -84,6 +98,7 @@ def fetch_all_bookings():
         
         # Return a 500 Internal Server Error with a user-friendly message
         return jsonify({"error": "An error occurred while fetching bookings"}), 500
+
 
 @booking_bp.route("/my-bookings", methods=['GET'])
 @jwt_required()
